@@ -1,4 +1,4 @@
-import Context from '../models/contextmodel.js';
+import Context from '../models/contextModel.js';
 
 // Fetch all contexts
 export const getContexts = async () => {

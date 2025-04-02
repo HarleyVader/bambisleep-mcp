@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Admin Panel</h1>
+  </header>
+  <main>
+    <h2>OBS Scenes</h2>
+    <ul>
+      <% scenes.forEach(scene => { %>
+        <li>
+          <%= scene.sceneName %>
+          <form action="/admin/switch-scene" method="POST" style="display:inline;">
+            <input type="hidden" name="sceneName" value="<%= scene.sceneName %>">
+            <button type="submit">Switch</button>
+          </form>
+        </li>
+      <% }) %>
+    </ul>
+
+    <!-- Section to display all contexts -->
+    <section>
+      <h2>Manage Contexts</h2>
+      <ul>
+        <% contexts.forEach(context => { %>
+          <li>
+            <strong><%= context.name %></strong>: <%= JSON.stringify(context.data) %>
+          </li>
+        <% }) %>
+      </ul>
+    </section>
+
+    <!-- Section to create a new context -->
+    <section>
+      <h2>Create New Context</h2>
+      <form action="/admin/create-context" method="POST">
+        <label for="name">Context Name:</label>
+        <input type="text" id="name" name="name" required>
+        <br>
+        <label for="data">Context Data (JSON):</label>
+        <textarea id="data" name="data" rows="4" required></textarea>
+        <br>
+        <button type="submit">Create Context</button>
+      </form>
+    </section>
+
+    <a href="/">Back to Home</a>
+  </main>
+</body>
+</html>
