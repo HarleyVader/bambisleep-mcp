@@ -1,8 +1,7 @@
 // Client-side JavaScript for nodes running in browsers
 class ClientNode {
   constructor(options = {}) {
-    this.serverUrl = options.serverUrl || window.location.origin;
-    this.nodeType = options.nodeType || 'swap'; // Default as swap node
+    this.nodeType = options.nodeType || 'swap';
     this.socket = null;
     this.resources = {
       cpu: 0,
@@ -11,167 +10,368 @@ class ClientNode {
       network: 0
     };
     this.connected = false;
-    this.handlers = {};
+    this.nodeId = null;
+    this.assignedHeadNode = options.headNodeId || null;
+    this.cachedParticles = [];
+    this.particleSize = 0;
+    this.connectionType = this.detectConnectionType();
+    this.memoryLimit = this.connectionType === 'wlan' ? 128 : 32; // MB
     
-    // Initialize the node
-    this.init();
-  }
-  
-  // Initialize node
-  async init() {
-    // Load Socket.io client
-    await this.loadSocketIo();
-    
-    // Measure available resources
-    await this.measureResources();
-    
-    // Connect to server
+    // Connect to appropriate namespace
     this.connect();
     
     // Set up resource monitoring
-    setInterval(() => this.updateResources(), 10000);
+    this.startResourceMonitoring();
   }
   
-  // Load Socket.io client dynamically
-  async loadSocketIo() {
-    if (typeof io === 'undefined') {
-      return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = '/socket.io/socket.io.js';
-        script.onload = resolve;
-        script.onerror = reject;
-        document.head.appendChild(script);
-      });
-    }
-  }
-  
-  // Connect to the server
+  // Connect to the appropriate socket namespace
   connect() {
-    this.socket = io(`${this.serverUrl}/${this.nodeType}`);
-    
-    this.socket.on('connect', () => {
-      console.log(`Connected to server as ${this.nodeType} node`);
-      this.connected = true;
+    try {
+      const namespace = `/${this.nodeType}`;
+      this.socket = io(namespace);
       
-      // Register with server
-      this.socket.emit('register', {
-        resources: this.resources
+      this.socket.on('connect', () => {
+        this.connected = true;
+        this.nodeId = this.socket.id;
+        console.log(`Connected as ${this.nodeType} node with ID: ${this.nodeId}`);
+        
+        // Register with initial resource measurement
+        this.updateResources().then(() => {
+          this.register();
+        });
       });
-    });
-    
-    this.socket.on('disconnect', () => {
-      console.log('Disconnected from server');
-      this.connected = false;
-    });
-    
-    // Set up event handlers
-    this.setupEventHandlers();
+      
+      this.socket.on('disconnect', () => {
+        this.connected = false;
+        console.log(`Disconnected ${this.nodeType} node`);
+      });
+      
+      // Set up event handlers based on node type
+      this.setupEventHandlers();
+    } catch (error) {
+      console.error(`Error connecting ${this.nodeType} node:`, error);
+    }
   }
   
-  // Set up event handlers based on node type
-  setupEventHandlers() {
+  // Register with the server
+  register() {
+    if (!this.connected) return;
+    
+    const registrationData = {
+      resources: this.resources,
+      connectionType: this.connectionType,
+      headNodeId: this.assignedHeadNode,
+      userAgent: navigator.userAgent,
+      deviceInfo: this.getDeviceInfo()
+    };
+    
+    this.socket.emit('register', registrationData);
+    console.log(`${this.nodeType} node registered with resources:`, this.resources);
+    
+    // For swap nodes, set memory limit based on connection type
     if (this.nodeType === 'swap') {
-      this.socket.on('particle:transfer', (data) => {
-        console.log('Received particle for transfer:', data.particleId);
-        
-        // Process particle (in reality, this would do more)
-        setTimeout(() => {
-          // Acknowledge receipt
-          this.socket.emit('particle:received', {
-            particleId: data.particleId,
-            headNodeId: data.headNodeId,
-            streamId: data.streamId,
-            status: 'processed'
-          });
-        }, 100);
-      });
-      
-      this.socket.on('stream:data:delivery', (data) => {
-        console.log('Received stream data for client:', data.streamId);
-        
-        // If we have a handler for this stream, call it
-        if (this.handlers[data.streamId]) {
-          this.handlers[data.streamId](data);
-        }
-      });
+      registrationData.memoryLimit = this.memoryLimit;
+    }
+    
+    // For data nodes, try to join a cluster
+    if (this.nodeType === 'data') {
+      this.socket.emit('join:cluster', {});
     }
   }
   
-  // Measure available resources
-  async measureResources() {
-    // In a browser environment, we can estimate some resources
-    // These are very rough estimates and would need improvement
-    
-    // Estimate CPU - not reliable in browsers
-    this.resources.cpu = 50; // Assume 50% available
-    
-    // Estimate memory based on performance.memory if available
-    if (performance && performance.memory) {
-      const memoryInfo = performance.memory;
-      this.resources.memory = Math.floor(
-        (memoryInfo.jsHeapSizeLimit - memoryInfo.usedJSHeapSize) / (1024 * 1024)
-      );
-    } else {
-      this.resources.memory = 500; // Assume 500MB available
-    }
-    
-    // Network - can't reliably measure, use a default
-    this.resources.network = 10; // Assume 10 Mbps
-    
-    // Storage - can check navigator.storage if available
-    if (navigator.storage && navigator.storage.estimate) {
-      try {
-        const estimate = await navigator.storage.estimate();
-        this.resources.storage = Math.floor(
-          (estimate.quota - estimate.usage) / (1024 * 1024)
-        );
-      } catch (e) {
-        this.resources.storage = 100; // Assume 100MB available
-      }
-    } else {
-      this.resources.storage = 100; // Assume 100MB available
-    }
-    
-    console.log('Measured resources:', this.resources);
-  }
-  
-  // Update resource measurements periodically
-  async updateResources() {
-    await this.measureResources();
-    
-    if (this.connected) {
-      this.socket.emit('resources:update', this.resources);
-    }
-  }
-  
-  // Request a stream for viewing
-  requestStream(streamId, callback) {
-    if (!this.connected) {
-      console.error('Not connected to server');
-      return false;
-    }
-    
-    const requestId = `req_${Date.now()}`;
-    this.handlers[streamId] = callback;
-    
-    this.socket.emit('client:stream:request', {
-      requestId,
-      streamId,
-      clientId: this.socket.id
+  // Set up event handlers for different node types
+  setupEventHandlers() {
+    // Common handlers
+    this.socket.on('error', (data) => {
+      console.error(`Socket error for ${this.nodeType} node:`, data);
     });
     
-    return requestId;
+    // Node-specific handlers
+    switch (this.nodeType) {
+      case 'swap':
+        this.setupSwapNodeHandlers();
+        break;
+      case 'head':
+        this.setupHeadNodeHandlers();
+        break;
+      case 'data':
+        this.setupDataNodeHandlers();
+        break;
+      default:
+        console.log(`No specific handlers for ${this.nodeType} node`);
+    }
   }
   
-  // Cancel a stream request
-  cancelStreamRequest(streamId) {
-    if (this.handlers[streamId]) {
-      delete this.handlers[streamId];
+  // Set up handlers for swap nodes
+  setupSwapNodeHandlers() {
+    // Process particles
+    this.socket.on('particles:process', (data) => {
+      console.log(`Received ${data.particleIds.length} particles to process`);
+      
+      // In a real implementation, this would process the particles
+      // For now, simulate processing and update cache
+      setTimeout(() => {
+        this.cachedParticles = [...this.cachedParticles, ...data.particleIds];
+        this.particleSize += this.estimateParticleSize(data.particleIds);
+        
+        // Check if we should transmit (reached 32MB)
+        if (this.particleSize >= 32 * 1024 * 1024) {
+          console.log(`Cache threshold reached (${this.particleSize} bytes), transmitting to head node`);
+          
+          this.socket.emit('particles:processed', {
+            streamId: data.streamId,
+            particleIds: this.cachedParticles,
+            particleSize: this.particleSize,
+            headNodeId: data.headNodeId
+          });
+          
+          // Clear cache
+          this.cachedParticles = [];
+          this.particleSize = 0;
+        }
+      }, 1000); // Simulate 1 second processing time
+    });
+    
+    // Handle retrieval and serving to clients
+    this.socket.on('retrieve:and:serve', (data) => {
+      console.log(`Asked to retrieve and serve stream ${data.streamId} to client ${data.clientId}`);
+      
+      // In a real implementation, this would retrieve data from data nodes via head node
+      // For now, just simulate it
+      setTimeout(() => {
+        console.log(`Simulating stream service to client ${data.clientId}`);
+      }, 500);
+    });
+    
+    // Handle confirmation of particle transmission
+    this.socket.on('particles:transmitted', (data) => {
+      if (data.success) {
+        console.log(`Particles for stream ${data.streamId} successfully transmitted`);
+      } else {
+        console.error(`Error transmitting particles: ${data.error}`);
+        
+        // In a real implementation, might retry or handle error
+      }
+    });
+  }
+  
+  // Set up handlers for head nodes
+  setupHeadNodeHandlers() {
+    // Handle particles from swap nodes
+    this.socket.on('particles:received:from:swap', (data) => {
+      console.log(`Received particles from swap node ${data.swapNodeId}`);
+      
+      // In a real implementation, would process and forward to manager
+      setTimeout(() => {
+        // Forward to manager
+        this.socket.emit('particles:forwarded:to:manager', {
+          streamId: data.streamId,
+          particleIds: data.particleIds,
+          swapNodeId: data.swapNodeId,
+          particleSize: data.particleSize
+        });
+      }, 500);
+    });
+    
+    // Handle client stream requests
+    this.socket.on('client:stream:serve', (data) => {
+      console.log(`Request to serve stream ${data.streamId} to client ${data.clientId}`);
+      
+      // Would find a suitable swap node and delegate in real implementation
+    });
+  }
+  
+  // Set up handlers for data nodes
+  setupDataNodeHandlers() {
+    // Handle cluster joining response
+    this.socket.on('cluster:joined', (data) => {
+      console.log(`Joined cluster ${data.clusterId} as ${data.isMaster ? 'master' : 'slave'}`);
+      this.clusterId = data.clusterId;
+      this.isMaster = data.isMaster;
+    });
+    
+    // Handle promotion to master
+    this.socket.on('promoted:to:master', (data) => {
+      console.log(`Promoted to master in cluster ${data.clusterId}`);
+      this.isMaster = true;
+    });
+    
+    // Handle storage requests (for master)
+    this.socket.on('particles:store', (data) => {
+      if (!this.isMaster) {
+        console.log('Ignoring storage request - not a master node');
+        return;
+      }
+      
+      console.log(`Storing ${data.particleIds.length} particles`);
+      
+      // Simulate storage delay
+      setTimeout(() => {
+        this.socket.emit('particles:stored', {
+          streamId: data.streamId,
+          particleIds: data.particleIds,
+          managerNodeId: data.managerNodeId,
+          headNodeId: data.headNodeId,
+          clusterId: this.clusterId
+        });
+      }, 1000);
+    });
+    
+    // Handle replication requests (for slaves)
+    this.socket.on('replicate:data', (data) => {
+      if (this.isMaster) {
+        console.log('Ignoring replication request - I am a master node');
+        return;
+      }
+      
+      console.log(`Replicating ${data.particleIds.length} particles from master ${data.sourceMasterId}`);
+      
+      // Simulate replication delay
+      setTimeout(() => {
+        console.log('Replication complete');
+      }, 2000);
+    });
+  }
+  
+  // Update resource measurements
+  async updateResources() {
+    try {
+      // Basic browser-based resource detection
+      // In a real implementation, would use more sophisticated methods
+      
+      // CPU load simulation (random for demo)
+      this.resources.cpu = Math.floor(Math.random() * 50) + 10; // 10-60%
+      
+      // Memory estimation
+      if (navigator.deviceMemory) {
+        // Convert GB to MB
+        this.resources.memory = navigator.deviceMemory * 1024 * 0.3; // 30% of available memory
+      } else {
+        // Default estimate
+        this.resources.memory = 1024; // 1GB
+      }
+      
+      // Storage estimation (simulate)
+      this.resources.storage = 5 * 1024; // 5GB
+      
+      // Network estimation
+      if (navigator.connection) {
+        if (navigator.connection.downlink) {
+          this.resources.network = navigator.connection.downlink; // Mbps
+        } else {
+          this.resources.network = 10; // Default 10 Mbps
+        }
+      } else {
+        this.resources.network = 10; // Default 10 Mbps
+      }
+      
+      // If already connected, send update
+      if (this.connected) {
+        this.socket.emit('resources:update', this.resources);
+      }
+      
+      return this.resources;
+    } catch (error) {
+      console.error('Error updating resources:', error);
+      return this.resources;
     }
+  }
+  
+  // Start periodic resource monitoring
+  startResourceMonitoring() {
+    this.resourceInterval = setInterval(() => {
+      this.updateResources();
+    }, 30000); // Update every 30 seconds
+  }
+  
+  // Estimate particle size (simplified)
+  estimateParticleSize(particleIds) {
+    // In a real implementation, would have actual size
+    // For now, assume average of 1MB per particle
+    return particleIds.length * 1024 * 1024;
+  }
+  
+  // Detect connection type
+  detectConnectionType() {
+    if (navigator.connection) {
+      const connection = navigator.connection;
+      
+      if (connection.type === 'wifi' || connection.effectiveType === '4g') {
+        return 'wlan';
+      }
+      
+      if (connection.effectiveType === '3g' || connection.effectiveType === '2g') {
+        return '2.4g';
+      }
+    }
+    
+    // Default to WiFi if can't detect
+    return 'wlan';
+  }
+  
+  // Get device info for telemetry
+  getDeviceInfo() {
+    const deviceInfo = {
+      platform: navigator.platform,
+      product: navigator.product,
+      language: navigator.language,
+      cookieEnabled: navigator.cookieEnabled,
+      screen: {
+        width: window.screen.width,
+        height: window.screen.height
+      }
+    };
+    
+    if (navigator.connection) {
+      deviceInfo.connection = {
+        effectiveType: navigator.connection.effectiveType,
+        downlink: navigator.connection.downlink,
+        rtt: navigator.connection.rtt,
+        saveData: navigator.connection.saveData
+      };
+    }
+    
+    return deviceInfo;
+  }
+  
+  // Cleanup
+  destroy() {
+    if (this.resourceInterval) {
+      clearInterval(this.resourceInterval);
+    }
+    
+    if (this.socket) {
+      // Flush any cached particles before disconnecting
+      if (this.nodeType === 'swap' && this.cachedParticles.length > 0) {
+        this.socket.emit('flush:particles', {
+          headNodeId: this.assignedHeadNode,
+          streamId: 'unknown_stream',
+          particleIds: this.cachedParticles,
+          particleSize: this.particleSize
+        });
+      }
+      
+      this.socket.disconnect();
+    }
+  }
+  
+  // Change node type (e.g., client -> swap)
+  changeNodeType(newType, options = {}) {
+    // Disconnect current socket
+    if (this.socket) {
+      this.socket.disconnect();
+    }
+    
+    // Change type and reconnect
+    this.nodeType = newType;
+    this.assignedHeadNode = options.headNodeId || null;
+    
+    // Connect with new node type
+    this.connect();
   }
 }
 
-// Auto-initialize if this script is loaded directly
+// If running in browser environment, make globally available
 if (typeof window !== 'undefined') {
-  window.clientNode = new ClientNode();
+  window.ClientNode = ClientNode;
 }
