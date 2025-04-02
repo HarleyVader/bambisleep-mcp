@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Node Administration</title>
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ddd;
+      text-align: left;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    .online {
+      color: green;
+    }
+    .offline {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+  <h1>Node Administration</h1>
+  <h2>Active Nodes</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>CPU</th>
+        <th>Memory</th>
+        <th>Storage</th>
+        <th>Network</th>
+        <th>Last Heartbeat</th>
+      </tr>
+    </thead>
+    <tbody>
+      <% nodes.forEach(node => { %>
+      <tr>
+        <td><%= node.nodeId %></td>
+        <td><%= node.nodeType %></td>
+        <td class="<%= node.status %>"><%= node.status %></td>
+        <td><%= node.resources.cpu %>%</td>
+        <td><%= node.resources.memory %>MB</td>
+        <td><%= node.resources.storage %>MB</td>
+        <td><%= node.resources.network %>Mbps</td>
+        <td><%= new Date(node.lastHeartbeat).toLocaleString() %></td>
+      </tr>
+      <% }); %>
+    </tbody>
+  </table>
+  
+  <script>
+    // Auto-refresh every 30 seconds
+    setTimeout(() => {
+      location.reload();
+    }, 30000);
+  </script>
+</body>
+</html>

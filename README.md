@@ -1,33 +1,33 @@
 bambisleep-mcp/
-├── models/                        # Data models 
-│   ├── resourceModel.js           # Tracks node resources
-│   ├── taskModel.js               # Defines tasks for nodes
-│   ├── streamModel.js             # RTSP stream metadata
-│   ├── deviceModel.js             # Connected devices
-│   └── userModel.js               # User accounts
+├── models/ # Data models
+│ ├── resourceModel.js # Tracks node resources
+│ ├── taskModel.js # Defines tasks for nodes
+│ ├── streamModel.js # RTSP stream metadata
+│ ├── deviceModel.js # Connected devices
+│ └── userModel.js # User accounts
 ├── services/
-│   ├── nodeService.js             # Node management logic
-│   ├── resourceService.js         # Resource allocation
-│   ├── streamService.js           # Stream processing
-│   └── obsService.js              # OBS integration
+│ ├── nodeService.js # Node management logic
+│ ├── resourceService.js # Resource allocation
+│ ├── streamService.js # Stream processing
+│ └── obsService.js # OBS integration
 ├── controllers/
-│   ├── streamController.js        # Stream handling
-│   ├── nodeController.js          # Node management
-│   └── adminController.js         # Admin operations
-├── routes/                        # API endpoints
-├── socket/                        # WebSocket communication
-│   ├── events.js                  # Event definitions
-│   ├── handlers/
-│   │   ├── headNode.js            # Head node handlers
-│   │   ├── swapNode.js            # Swap node handlers
-│   │   ├── dataNode.js            # Data node handlers
-│   │   └── managerNode.js         # Manager node handlers
-│   └── socket-server.js           # Socket.io server setup
-├── rtsp/                          # RTSP functionality
-│   ├── stream-manager.js          # Stream lifecycle
-│   ├── stream-processor.js        # Stream processing
-│   └── particle-transport.js      # Data particle movement
-└── server.js                      # Main application entry
+│ ├── streamController.js # Stream handling
+│ ├── nodeController.js # Node management
+│ └── adminController.js # Admin operations
+├── routes/ # API endpoints
+├── socket/ # WebSocket communication
+│ ├── events.js # Event definitions
+│ ├── handlers/
+│ │ ├── headNode.js # Head node handlers
+│ │ ├── swapNode.js # Swap node handlers
+│ │ ├── dataNode.js # Data node handlers
+│ │ └── managerNode.js # Manager node handlers
+│ └── socket-server.js # Socket.io server setup
+├── rtsp/ # RTSP functionality
+│ ├── stream-manager.js # Stream lifecycle
+│ ├── stream-processor.js # Stream processing
+│ └── particle-transport.js # Data particle movement
+└── server.js # Main application entry
 
 # Comprehensive Setup Guide: RTSP Stream Factory with Distributed Node Architecture
 
@@ -51,17 +51,50 @@ This guide will walk you through setting up and deploying the entire system from
 ### 1.1. Install Node.js and npm
 
 **Windows**:
+
+````markdown
+# Install nvm (Node Version Manager)
+
+To install or update nvm, run the following command:
+
+**Using cURL**:
+
+```bash
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
 ```
-# Download and install from https://nodejs.org/ (LTS version)
-# Verify installation
-node --version
-npm --version
+````
+
+**Using Wget**:
+
+```bash
+wget -qO- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash
 ```
 
-**Linux**:
+This script clones the nvm repository to `~/.nvm` and attempts to add the following lines to your shell profile (`~/.bashrc`, `~/.bash_profile`, `~/.zshrc`, or `~/.profile`):
+
 ```bash
-curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
-sudo apt-get install -y nodejs
+export NVM_DIR="$([ -z "${XDG_CONFIG_HOME-}" ] && printf %s "${HOME}/.nvm" || printf %s "${XDG_CONFIG_HOME}/nvm")"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+```
+
+If the script updates the wrong profile file, set the `$PROFILE` environment variable to the correct file path and rerun the installation script.
+
+After installation, restart your terminal or run the following command to load nvm:
+
+```bash
+source ~/.nvm/nvm.sh
+```
+
+**Verify Installation**:
+
+```bash
+nvm --version
+```
+
+**Install Node.js using nvm**:
+
+```bash
+nvm install --lts
 node --version
 npm --version
 ```
@@ -69,30 +102,46 @@ npm --version
 ### 1.2. Install MongoDB
 
 **Windows**:
+
 ```
 # Download and install from https://www.mongodb.com/try/download/community
 # Add MongoDB bin directory to PATH
 ```
 
-**Linux**:
+**Linux** -
+### debian:
 ```bash
-wget -qO - https://www.mongodb.org/static/pgp/server-5.0.asc | sudo apt-key add -
-echo "deb [ arch=amd64,arm64 ] https://repo.mongodb.org/apt/ubuntu focal/mongodb-org/5.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-5.0.list
+# dependencies
+sudo apt-get install gnupg curl
+# get mongodb keyring
+curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | \
+   sudo gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg \
+   --dearmor
+```
+# get keyring, update & install
+```bash
+# echo keyring
+echo "deb [ signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/8.0 main" | sudo tee /etc/apt/sources.list.d/mongodb-org-8.0.list
+# uptade
 sudo apt-get update
+# install mongodb
 sudo apt-get install -y mongodb-org
+# enable & start mongod
 sudo systemctl start mongod
 sudo systemctl enable mongod
-```
 
+```
 ### 1.3. Install FFmpeg
 
 **Windows**:
+
 ```
 # Download from https://ffmpeg.org/download.html
 # Extract and add bin directory to PATH
 ```
 
 **Linux**:
+
 ```bash
 sudo apt update
 sudo apt install ffmpeg
@@ -102,11 +151,13 @@ ffmpeg -version
 ### 1.4. Install OBS Studio
 
 **Windows/Linux**:
+
 ```
 # Download and install from https://obsproject.com/
 ```
 
 Enable WebSocket server in OBS:
+
 1. Go to Tools > WebSocket Server Settings
 2. Check "Enable WebSocket server"
 3. Set port to 4444
@@ -183,21 +234,21 @@ Copy the previously created files to their correct locations:
 Create the file stream-manager.js:
 
 ```javascript
-import { EventEmitter } from 'events';
-import { spawn } from 'child_process';
-import { createWriteStream } from 'fs';
-import path from 'path';
+import { EventEmitter } from "events";
+import { spawn } from "child_process";
+import { createWriteStream } from "fs";
+import path from "path";
 
 export class StreamManager extends EventEmitter {
   constructor() {
     super();
     this.streams = new Map();
-    this.tempDirectory = path.join(process.cwd(), 'temp');
+    this.tempDirectory = path.join(process.cwd(), "temp");
     this.ensureTempDirectory();
   }
 
   ensureTempDirectory() {
-    const fs = require('fs');
+    const fs = require("fs");
     if (!fs.existsSync(this.tempDirectory)) {
       fs.mkdirSync(this.tempDirectory, { recursive: true });
     }
@@ -212,16 +263,16 @@ export class StreamManager extends EventEmitter {
       id: streamId,
       rtspUrl: options.rtspUrl,
       deviceId: options.deviceId,
-      resolution: options.resolution || '720p',
+      resolution: options.resolution || "720p",
       fps: options.fps || 30,
-      status: 'created',
+      status: "created",
       process: null,
-      createdAt: new Date()
+      createdAt: new Date(),
     };
 
     this.streams.set(streamId, streamInfo);
     console.log(`Stream ${streamId} created with RTSP URL: ${options.rtspUrl}`);
-    
+
     return streamId;
   }
 
@@ -231,13 +282,13 @@ export class StreamManager extends EventEmitter {
       throw new Error(`Stream ${streamId} not found`);
     }
 
-    if (streamInfo.status === 'active') {
+    if (streamInfo.status === "active") {
       return streamId; // Already running
     }
 
     try {
       // Update status to starting
-      streamInfo.status = 'starting';
+      streamInfo.status = "starting";
       this.streams.set(streamId, streamInfo);
 
       // Simulate creating particles from the stream
@@ -245,14 +296,14 @@ export class StreamManager extends EventEmitter {
       this.simulateStreamProcessing(streamId);
 
       // Update status to active
-      streamInfo.status = 'active';
+      streamInfo.status = "active";
       streamInfo.startedAt = new Date();
       this.streams.set(streamId, streamInfo);
 
       console.log(`Stream ${streamId} started`);
       return streamId;
     } catch (error) {
-      streamInfo.status = 'error';
+      streamInfo.status = "error";
       streamInfo.error = error.message;
       this.streams.set(streamId, streamInfo);
       throw error;
@@ -270,7 +321,7 @@ export class StreamManager extends EventEmitter {
       streamInfo.process = null;
     }
 
-    streamInfo.status = 'stopped';
+    streamInfo.status = "stopped";
     streamInfo.stoppedAt = new Date();
     this.streams.set(streamId, streamInfo);
 
@@ -299,27 +350,27 @@ export class StreamManager extends EventEmitter {
   // Simulate processing an RTSP stream and creating particles
   simulateStreamProcessing(streamId) {
     const streamInfo = this.streams.get(streamId);
-    
+
     // Simulate particle creation every second
     const interval = setInterval(() => {
-      if (streamInfo.status !== 'active') {
+      if (streamInfo.status !== "active") {
         clearInterval(interval);
         return;
       }
 
       // Emit particles created event (5-10 particles per second)
       const particleCount = Math.floor(Math.random() * 6) + 5;
-      this.emit('particles:created', {
+      this.emit("particles:created", {
         streamId,
         count: particleCount,
-        timestamp: new Date()
+        timestamp: new Date(),
       });
 
       // Simulate stream processing
-      this.emit('stream:processed', {
+      this.emit("stream:processed", {
         streamId,
         timestamp: new Date(),
-        frameCount: streamInfo.fps
+        frameCount: streamInfo.fps,
       });
     }, 1000);
 
@@ -332,27 +383,34 @@ export class StreamManager extends EventEmitter {
   // For example:
   async startRtspCapture(streamId, rtspUrl, outputPath) {
     const args = [
-      '-i', rtspUrl,
-      '-c:v', 'copy',
-      '-c:a', 'copy',
-      '-f', 'segment',
-      '-segment_time', '5',
-      '-segment_format', 'mp4',
-      '-reset_timestamps', '1',
-      `${outputPath}/segment_%03d.mp4`
+      "-i",
+      rtspUrl,
+      "-c:v",
+      "copy",
+      "-c:a",
+      "copy",
+      "-f",
+      "segment",
+      "-segment_time",
+      "5",
+      "-segment_format",
+      "mp4",
+      "-reset_timestamps",
+      "1",
+      `${outputPath}/segment_%03d.mp4`,
     ];
 
-    const ffmpeg = spawn('ffmpeg', args);
-    
-    ffmpeg.stdout.on('data', (data) => {
+    const ffmpeg = spawn("ffmpeg", args);
+
+    ffmpeg.stdout.on("data", (data) => {
       console.log(`ffmpeg stdout: ${data}`);
     });
 
-    ffmpeg.stderr.on('data', (data) => {
+    ffmpeg.stderr.on("data", (data) => {
       console.log(`ffmpeg stderr: ${data}`);
     });
 
-    ffmpeg.on('close', (code) => {
+    ffmpeg.on("close", (code) => {
       console.log(`ffmpeg process exited with code ${code}`);
     });
 
@@ -368,7 +426,7 @@ export default StreamManager;
 Create the file obsService.js:
 
 ```javascript
-import OBSWebSocket from 'obs-websocket-js';
+import OBSWebSocket from "obs-websocket-js";
 
 class OBSService {
   constructor() {
@@ -376,20 +434,20 @@ class OBSService {
     this.connected = false;
   }
 
-  async connect(address = 'localhost:4444', password = '') {
+  async connect(address = "localhost:4444", password = "") {
     try {
       await this.obs.connect(`ws://${address}`, password);
-      console.log('Connected to OBS');
+      console.log("Connected to OBS");
       this.connected = true;
-      
+
       // Set up event handlers
-      this.obs.on('error', err => {
-        console.error('OBS WebSocket Error:', err);
+      this.obs.on("error", (err) => {
+        console.error("OBS WebSocket Error:", err);
       });
-      
+
       return true;
     } catch (error) {
-      console.error('Error connecting to OBS:', error);
+      console.error("Error connecting to OBS:", error);
       this.connected = false;
       return false;
     }
@@ -399,96 +457,100 @@ class OBSService {
     if (this.connected) {
       await this.obs.disconnect();
       this.connected = false;
-      console.log('Disconnected from OBS');
+      console.log("Disconnected from OBS");
     }
   }
 
   async createRtspSource(sceneName, sourceName, rtspUrl) {
     if (!this.connected) {
-      throw new Error('Not connected to OBS');
+      throw new Error("Not connected to OBS");
     }
 
     try {
       // Check if scene exists
-      const scenes = await this.obs.call('GetSceneList');
-      const sceneExists = scenes.scenes.some(scene => scene.sceneName === sceneName);
-      
+      const scenes = await this.obs.call("GetSceneList");
+      const sceneExists = scenes.scenes.some(
+        (scene) => scene.sceneName === sceneName
+      );
+
       if (!sceneExists) {
         // Create scene if it doesn't exist
-        await this.obs.call('CreateScene', {
-          sceneName
+        await this.obs.call("CreateScene", {
+          sceneName,
         });
       }
-      
+
       // Check if source already exists
-      const sources = await this.obs.call('GetSourcesList');
-      const sourceExists = sources.sources.some(source => source.sourceName === sourceName);
-      
+      const sources = await this.obs.call("GetSourcesList");
+      const sourceExists = sources.sources.some(
+        (source) => source.sourceName === sourceName
+      );
+
       if (sourceExists) {
         // Remove existing source
-        await this.obs.call('RemoveSource', {
-          sourceName
+        await this.obs.call("RemoveSource", {
+          sourceName,
         });
       }
-      
+
       // Create media source for RTSP
-      await this.obs.call('CreateSource', {
+      await this.obs.call("CreateSource", {
         sourceName,
-        sourceKind: 'ffmpeg_source',
+        sourceKind: "ffmpeg_source",
         sceneName,
         sourceSettings: {
           input: rtspUrl,
           hw_decode: true,
           buffering_mb: 10,
           reconnect_delay_sec: 1,
-          restart_on_activate: true
-        }
+          restart_on_activate: true,
+        },
       });
-      
+
       console.log(`Created RTSP source ${sourceName} in scene ${sceneName}`);
       return true;
     } catch (error) {
-      console.error('Error creating RTSP source:', error);
+      console.error("Error creating RTSP source:", error);
       throw error;
     }
   }
 
   async startStreaming() {
     if (!this.connected) {
-      throw new Error('Not connected to OBS');
+      throw new Error("Not connected to OBS");
     }
 
     try {
-      const streamStatus = await this.obs.call('GetStreamStatus');
-      
+      const streamStatus = await this.obs.call("GetStreamStatus");
+
       if (!streamStatus.outputActive) {
-        await this.obs.call('StartStream');
-        console.log('OBS streaming started');
+        await this.obs.call("StartStream");
+        console.log("OBS streaming started");
       }
-      
+
       return true;
     } catch (error) {
-      console.error('Error starting OBS stream:', error);
+      console.error("Error starting OBS stream:", error);
       throw error;
     }
   }
 
   async stopStreaming() {
     if (!this.connected) {
-      throw new Error('Not connected to OBS');
+      throw new Error("Not connected to OBS");
     }
 
     try {
-      const streamStatus = await this.obs.call('GetStreamStatus');
-      
+      const streamStatus = await this.obs.call("GetStreamStatus");
+
       if (streamStatus.outputActive) {
-        await this.obs.call('StopStream');
-        console.log('OBS streaming stopped');
+        await this.obs.call("StopStream");
+        console.log("OBS streaming stopped");
       }
-      
+
       return true;
     } catch (error) {
-      console.error('Error stopping OBS stream:', error);
+      console.error("Error stopping OBS stream:", error);
       throw error;
     }
   }
@@ -504,23 +566,23 @@ export default obsService;
 Make sure the server.js file is updated with the correct imports and middleware:
 
 ```javascript
-import express from 'express';
-import http from 'http';
-import { Server } from 'socket.io';
-import mongoose from 'mongoose';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import express from "express";
+import http from "http";
+import { Server } from "socket.io";
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 // Import routes
-import streamRoutes from './routes/streamRoutes.js';
-import nodeRoutes from './routes/nodeRoutes.js';
+import streamRoutes from "./routes/streamRoutes.js";
+import nodeRoutes from "./routes/nodeRoutes.js";
 
 // Import socket initialization
-import initializeSocket from './socket.js';
+import initializeSocket from "./socket.js";
 
 // Import OBS service
-import obsService from './services/obsService.js';
+import obsService from "./services/obsService.js";
 
 dotenv.config();
 
@@ -537,48 +599,49 @@ initializeSocket(io);
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, "public")));
 
 // Set EJS as templating engine
-app.set('view engine', 'ejs');
-app.set('views', path.join(__dirname, 'views'));
+app.set("view engine", "ejs");
+app.set("views", path.join(__dirname, "views"));
 
 // Database Connection
-const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/bambisleep_mcp';
-mongoose.connect(mongoURI)
-  .then(() => console.log('MongoDB connected'))
-  .catch(err => {
-    console.error('MongoDB connection error:', err);
+const mongoURI =
+  process.env.MONGO_URI || "mongodb://localhost:27017/bambisleep_mcp";
+mongoose
+  .connect(mongoURI)
+  .then(() => console.log("MongoDB connected"))
+  .catch((err) => {
+    console.error("MongoDB connection error:", err);
     process.exit(1);
   });
 
 // Routes
-app.use('/api/streams', streamRoutes);
-app.use('/api/nodes', nodeRoutes);
+app.use("/api/streams", streamRoutes);
+app.use("/api/nodes", nodeRoutes);
 
 // Client stream page
-app.get('/stream-client', (req, res) => {
-  res.render('streaming-client');
+app.get("/stream-client", (req, res) => {
+  res.render("streaming-client");
 });
 
 // Home page
-app.get('/', (req, res) => {
-  res.render('index', { title: 'RTSP Stream Factory' });
+app.get("/", (req, res) => {
+  res.render("index", { title: "RTSP Stream Factory" });
 });
 
 // Connect to OBS if configured
-const OBS_ADDRESS = process.env.OBS_ADDRESS || 'localhost:4444';
-const OBS_PASSWORD = process.env.OBS_PASSWORD || '';
+const OBS_ADDRESS = process.env.OBS_ADDRESS || "localhost:4444";
+const OBS_PASSWORD = process.env.OBS_PASSWORD || "";
 
-if (process.env.CONNECT_OBS === 'true') {
-  obsService.connect(OBS_ADDRESS, OBS_PASSWORD)
-    .then(connected => {
-      if (connected) {
-        console.log('OBS connected successfully');
-      } else {
-        console.warn('Could not connect to OBS, some features will be disabled');
-      }
-    });
+if (process.env.CONNECT_OBS === "true") {
+  obsService.connect(OBS_ADDRESS, OBS_PASSWORD).then((connected) => {
+    if (connected) {
+      console.log("OBS connected successfully");
+    } else {
+      console.warn("Could not connect to OBS, some features will be disabled");
+    }
+  });
 }
 
 // Start Server
@@ -588,20 +651,20 @@ server.listen(PORT, () => {
 });
 
 // Graceful shutdown
-process.on('SIGINT', async () => {
-  console.log('Shutting down gracefully...');
-  
+process.on("SIGINT", async () => {
+  console.log("Shutting down gracefully...");
+
   // Disconnect from OBS
   if (obsService.connected) {
     await obsService.disconnect();
   }
-  
+
   // Close MongoDB connection
   await mongoose.connection.close();
-  
+
   // Close the HTTP server
   server.close(() => {
-    console.log('Server shut down successfully');
+    console.log("Server shut down successfully");
     process.exit(0);
   });
 });
@@ -612,6 +675,7 @@ process.on('SIGINT', async () => {
 ### 4.1. Start the MongoDB Service
 
 **Windows**:
+
 ```
 # If installed as a service, it should be running
 # Otherwise, run from command line:
@@ -619,6 +683,7 @@ process.on('SIGINT', async () => {
 ```
 
 **Linux**:
+
 ```bash
 sudo systemctl start mongod
 sudo systemctl status mongod
@@ -709,15 +774,17 @@ To observe the communication between nodes, you can add a simple logger in the b
 2. In each Console tab, paste the following (modified for each node type):
 
 For Swap Node:
+
 ```javascript
-const swapNode = new ClientNode({ nodeType: 'swap' });
-console.log('Swap node initialized');
+const swapNode = new ClientNode({ nodeType: "swap" });
+console.log("Swap node initialized");
 ```
 
 For Head Node:
+
 ```javascript
-const headNode = new ClientNode({ nodeType: 'head' });
-console.log('Head node initialized');
+const headNode = new ClientNode({ nodeType: "head" });
+console.log("Head node initialized");
 ```
 
 ### 5.2. Test Node Resource Distribution
@@ -725,12 +792,15 @@ console.log('Head node initialized');
 To test how resources are distributed among nodes, you can simulate processing load:
 
 1. In the Swap Node console, trigger particle processing:
+
 ```javascript
 // Simulate particles
-swapNode.socket.emit('particles:process', {
-  streamId: 'test-stream',
-  particleIds: Array(20).fill().map((_, i) => `particle_${i}`),
-  headNodeId: 'head-node-id' // Use actual head node ID
+swapNode.socket.emit("particles:process", {
+  streamId: "test-stream",
+  particleIds: Array(20)
+    .fill()
+    .map((_, i) => `particle_${i}`),
+  headNodeId: "head-node-id", // Use actual head node ID
 });
 ```
 
@@ -741,6 +811,7 @@ swapNode.socket.emit('particles:process', {
 To test the system's resilience, simulate node failures:
 
 1. Disconnect a node:
+
 ```javascript
 // In the node's console
 swapNode.socket.disconnect();
@@ -758,17 +829,17 @@ swapNode.socket.disconnect();
 Create a simple admin page at `/admin/nodes`:
 
 ```javascript
-import express from 'express';
-import Resource from '../models/resourceModel.js';
+import express from "express";
+import Resource from "../models/resourceModel.js";
 
 const router = express.Router();
 
 // Get all nodes
-router.get('/nodes', async (req, res) => {
+router.get("/nodes", async (req, res) => {
   try {
     const nodes = await Resource.find();
-    
-    res.render('admin/nodes', { nodes });
+
+    res.render("admin/nodes", { nodes });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -783,73 +854,74 @@ Create the corresponding view:
 ejs -->
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Node Administration</title>
-  <style>
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th, td {
-      padding: 8px;
-      border: 1px solid #ddd;
-      text-align: left;
-    }
-    th {
-      background-color: #f2f2f2;
-    }
-    tr:nth-child(even) {
-      background-color: #f9f9f9;
-    }
-    .online {
-      color: green;
-    }
-    .offline {
-      color: red;
-    }
-  </style>
-</head>
-<body>
-  <h1>Node Administration</h1>
-  <h2>Active Nodes</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Type</th>
-        <th>Status</th>
-        <th>CPU</th>
-        <th>Memory</th>
-        <th>Storage</th>
-        <th>Network</th>
-        <th>Last Heartbeat</th>
-      </tr>
-    </thead>
-    <tbody>
-      <% nodes.forEach(node => { %>
-      <tr>
-        <td><%= node.nodeId %></td>
-        <td><%= node.nodeType %></td>
-        <td class="<%= node.status %>"><%= node.status %></td>
-        <td><%= node.resources.cpu %>%</td>
-        <td><%= node.resources.memory %>MB</td>
-        <td><%= node.resources.storage %>MB</td>
-        <td><%= node.resources.network %>Mbps</td>
-        <td><%= new Date(node.lastHeartbeat).toLocaleString() %></td>
-      </tr>
-      <% }); %>
-    </tbody>
-  </table>
-  
-  <script>
-    // Auto-refresh every 30 seconds
-    setTimeout(() => {
-      location.reload();
-    }, 30000);
-  </script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Node Administration</title>
+    <style>
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th,
+      td {
+        padding: 8px;
+        border: 1px solid #ddd;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+      }
+      tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+      .online {
+        color: green;
+      }
+      .offline {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Node Administration</h1>
+    <h2>Active Nodes</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Type</th>
+          <th>Status</th>
+          <th>CPU</th>
+          <th>Memory</th>
+          <th>Storage</th>
+          <th>Network</th>
+          <th>Last Heartbeat</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% nodes.forEach(node => { %>
+        <tr>
+          <td><%= node.nodeId %></td>
+          <td><%= node.nodeType %></td>
+          <td class="<%= node.status %>"><%= node.status %></td>
+          <td><%= node.resources.cpu %>%</td>
+          <td><%= node.resources.memory %>MB</td>
+          <td><%= node.resources.storage %>MB</td>
+          <td><%= node.resources.network %>Mbps</td>
+          <td><%= new Date(node.lastHeartbeat).toLocaleString() %></td>
+        </tr>
+        <% }); %>
+      </tbody>
+    </table>
+
+    <script>
+      // Auto-refresh every 30 seconds
+      setTimeout(() => {
+        location.reload();
+      }, 30000);
+    </script>
+  </body>
 </html>
 ```
 
@@ -860,12 +932,12 @@ Create a stream monitoring page:
 ```javascript
 // Add to routes/adminRoutes.js
 // Get all streams
-router.get('/streams', async (req, res) => {
+router.get("/streams", async (req, res) => {
   try {
-    const streamOrchestrator = req.app.get('streamOrchestrator');
+    const streamOrchestrator = req.app.get("streamOrchestrator");
     const streams = await streamOrchestrator.getActiveStreams();
-    
-    res.render('admin/streams', { streams });
+
+    res.render("admin/streams", { streams });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -881,6 +953,7 @@ Create the corresponding view.
 If nodes aren't connecting properly:
 
 1. Check MongoDB connection:
+
 ```bash
 mongo
 > use bambisleep_mcp
@@ -896,16 +969,19 @@ mongo
 If streams aren't starting:
 
 1. Verify RTSP source is accessible:
+
 ```bash
 ffplay rtsp://localhost:8554/test
 ```
 
 2. Check if OBS is connected:
+
 ```bash
 curl http://localhost:5000/api/obs/status
 ```
 
 3. Check stream status via API:
+
 ```bash
 curl http://localhost:5000/api/streams/{streamId}/status
 ```
@@ -915,6 +991,7 @@ curl http://localhost:5000/api/streams/{streamId}/status
 If data nodes aren't forming clusters properly:
 
 1. Check node registrations:
+
 ```bash
 curl http://localhost:5000/api/nodes
 ```
@@ -931,28 +1008,28 @@ To simulate larger deployments:
 Use a script to create multiple node instances:
 
 ```javascript
-const { spawn } = require('child_process');
-const path = require('path');
+const { spawn } = require("child_process");
+const path = require("path");
 
 // Configuration
-const nodeTypes = ['swap', 'head', 'data'];
+const nodeTypes = ["swap", "head", "data"];
 const countPerType = {
   swap: 5,
   head: 2,
-  data: 4
+  data: 4,
 };
 
 // Spawn nodes
 for (const type of nodeTypes) {
   for (let i = 0; i < countPerType[type]; i++) {
-    const nodeProcess = spawn('node', ['scripts/run-node.js', type, i], {
-      stdio: 'inherit',
-      env: { ...process.env, NODE_TYPE: type, NODE_INDEX: i }
+    const nodeProcess = spawn("node", ["scripts/run-node.js", type, i], {
+      stdio: "inherit",
+      env: { ...process.env, NODE_TYPE: type, NODE_INDEX: i },
     });
-    
+
     console.log(`Started ${type} node ${i}`);
-    
-    nodeProcess.on('close', (code) => {
+
+    nodeProcess.on("close", (code) => {
       console.log(`${type} node ${i} exited with code ${code}`);
     });
   }
@@ -962,10 +1039,10 @@ for (const type of nodeTypes) {
 Create the run-node.js script:
 
 ```javascript
-const io = require('socket.io-client');
-const os = require('os');
+const io = require("socket.io-client");
+const os = require("os");
 
-const nodeType = process.argv[2] || process.env.NODE_TYPE || 'swap';
+const nodeType = process.argv[2] || process.env.NODE_TYPE || "swap";
 const nodeIndex = process.argv[3] || process.env.NODE_INDEX || 0;
 
 // Connect to appropriate namespace
@@ -973,59 +1050,59 @@ const socket = io(`http://localhost:5000/${nodeType}`);
 
 // Simulated resources
 const resources = {
-  cpu: 20 + (nodeIndex * 5) % 40,  // 20-60%
-  memory: 256 + (nodeIndex * 128),  // 256-1024 MB
-  storage: 1024 + (nodeIndex * 512),  // 1-5 GB
-  network: 5 + (nodeIndex % 5)  // 5-10 Mbps
+  cpu: 20 + ((nodeIndex * 5) % 40), // 20-60%
+  memory: 256 + nodeIndex * 128, // 256-1024 MB
+  storage: 1024 + nodeIndex * 512, // 1-5 GB
+  network: 5 + (nodeIndex % 5), // 5-10 Mbps
 };
 
-socket.on('connect', () => {
+socket.on("connect", () => {
   console.log(`${nodeType} node ${nodeIndex} connected with ID: ${socket.id}`);
-  
+
   // Register node
-  socket.emit('register', {
+  socket.emit("register", {
     resources,
-    connectionType: nodeIndex % 2 === 0 ? 'wlan' : '2.4g',
+    connectionType: nodeIndex % 2 === 0 ? "wlan" : "2.4g",
     userAgent: `NodeSimulator/${nodeType}/${nodeIndex}`,
     deviceInfo: {
       platform: os.platform(),
       hostname: os.hostname(),
-      cpus: os.cpus().length
-    }
+      cpus: os.cpus().length,
+    },
   });
-  
+
   // For data nodes, join a cluster
-  if (nodeType === 'data') {
-    socket.emit('join:cluster', {});
+  if (nodeType === "data") {
+    socket.emit("join:cluster", {});
   }
-  
+
   // Set up heartbeat
   setInterval(() => {
     // Simulate resource changes
     resources.cpu = 20 + Math.floor(Math.random() * 40);
-    socket.emit('heartbeat');
-    socket.emit('resources:update', resources);
+    socket.emit("heartbeat");
+    socket.emit("resources:update", resources);
   }, 15000);
-  
+
   // Handle common events based on node type
   setupEventHandlers(socket, nodeType, nodeIndex);
 });
 
 function setupEventHandlers(socket, type, index) {
   // Common error handler
-  socket.on('error', (error) => {
+  socket.on("error", (error) => {
     console.error(`${type} node ${index} error:`, error);
   });
-  
+
   // Type-specific handlers
   switch (type) {
-    case 'swap':
+    case "swap":
       handleSwapNodeEvents(socket, index);
       break;
-    case 'head':
+    case "head":
       handleHeadNodeEvents(socket, index);
       break;
-    case 'data':
+    case "data":
       handleDataNodeEvents(socket, index);
       break;
   }
@@ -1033,16 +1110,18 @@ function setupEventHandlers(socket, type, index) {
 
 function handleSwapNodeEvents(socket, index) {
   // Handle particles processing
-  socket.on('particles:process', (data) => {
-    console.log(`Swap node ${index} processing particles for stream ${data.streamId}`);
-    
+  socket.on("particles:process", (data) => {
+    console.log(
+      `Swap node ${index} processing particles for stream ${data.streamId}`
+    );
+
     // Simulate processing delay
     setTimeout(() => {
       // After "processing", send back to head node
-      socket.emit('particles:processed', {
+      socket.emit("particles:processed", {
         streamId: data.streamId,
         particleIds: data.particleIds,
-        headNodeId: data.headNodeId
+        headNodeId: data.headNodeId,
       });
     }, 1000); // 1 second delay
   });
@@ -1050,16 +1129,16 @@ function handleSwapNodeEvents(socket, index) {
 
 function handleHeadNodeEvents(socket, index) {
   // Handle particle processing from swap nodes
-  socket.on('particles:received:from:swap', (data) => {
+  socket.on("particles:received:from:swap", (data) => {
     console.log(`Head node ${index} received particles from swap node`);
-    
+
     // Simulate processing and forward to manager
     setTimeout(() => {
-      socket.emit('particles:received', {
+      socket.emit("particles:received", {
         streamId: data.streamId,
         particleIds: data.particleIds,
         headNodeId: socket.id,
-        particleSize: data.particleIds.length * 1024 * 1024 // Simulate 1MB per particle
+        particleSize: data.particleIds.length * 1024 * 1024, // Simulate 1MB per particle
       });
     }, 500);
   });
@@ -1067,37 +1146,45 @@ function handleHeadNodeEvents(socket, index) {
 
 function handleDataNodeEvents(socket, index) {
   // Handle storage requests
-  socket.on('particles:store', (data) => {
-    console.log(`Data node ${index} storing particles for stream ${data.streamId}`);
-    
+  socket.on("particles:store", (data) => {
+    console.log(
+      `Data node ${index} storing particles for stream ${data.streamId}`
+    );
+
     // Simulate storage delay
     setTimeout(() => {
-      socket.emit('particles:stored', {
+      socket.emit("particles:stored", {
         streamId: data.streamId,
         particleIds: data.particleIds,
         managerNodeId: data.managerNodeId,
-        headNodeId: data.headNodeId
+        headNodeId: data.headNodeId,
       });
     }, 1500);
   });
-  
+
   // Handle cluster membership events
-  socket.on('cluster:joined', (data) => {
-    console.log(`Data node ${index} joined cluster ${data.clusterId} as ${data.isMaster ? 'master' : 'slave'}`);
+  socket.on("cluster:joined", (data) => {
+    console.log(
+      `Data node ${index} joined cluster ${data.clusterId} as ${
+        data.isMaster ? "master" : "slave"
+      }`
+    );
   });
-  
-  socket.on('promoted:to:master', (data) => {
-    console.log(`Data node ${index} promoted to master in cluster ${data.clusterId}`);
+
+  socket.on("promoted:to:master", (data) => {
+    console.log(
+      `Data node ${index} promoted to master in cluster ${data.clusterId}`
+    );
   });
 }
 
 // Handle disconnection
-socket.on('disconnect', () => {
+socket.on("disconnect", () => {
   console.log(`${nodeType} node ${nodeIndex} disconnected`);
 });
 
 // Keep process running
-process.on('SIGINT', () => {
+process.on("SIGINT", () => {
   console.log(`Shutting down ${nodeType} node ${nodeIndex}`);
   socket.disconnect();
   process.exit(0);
@@ -1121,18 +1208,18 @@ node scripts/spawn-nodes.js
 Create a real-time dashboard to visualize node resources and stream processing:
 
 ```javascript
-import express from 'express';
-import Resource from '../models/resourceModel.js';
+import express from "express";
+import Resource from "../models/resourceModel.js";
 
 const router = express.Router();
 
-router.get('/', (req, res) => {
-  res.render('dashboard/index');
+router.get("/", (req, res) => {
+  res.render("dashboard/index");
 });
 
-router.get('/api/resources', async (req, res) => {
+router.get("/api/resources", async (req, res) => {
   try {
-    const resources = await Resource.find({ status: 'online' });
+    const resources = await Resource.find({ status: "online" });
     res.json(resources);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -1159,26 +1246,26 @@ class NetworkSimulator {
     this.packetLoss = 0;
     this.bandwidthLimit = 0;
   }
-  
+
   enable() {
     this.enabled = true;
   }
-  
+
   disable() {
     this.enabled = false;
   }
-  
+
   setConditions(conditions) {
     this.latency = conditions.latency || 0;
     this.packetLoss = conditions.packetLoss || 0;
     this.bandwidthLimit = conditions.bandwidthLimit || 0;
   }
-  
+
   apply(socket) {
     if (!this.enabled) return;
-    
+
     const originalEmit = socket.emit;
-    
+
     // Override emit to simulate network conditions
     socket.emit = (...args) => {
       // Simulate latency
@@ -1200,12 +1287,12 @@ export default new NetworkSimulator();
 ### 10.1. Create a Load Testing Script
 
 ```javascript
-const { performance } = require('perf_hooks');
-const axios = require('axios');
-const io = require('socket.io-client');
+const { performance } = require("perf_hooks");
+const axios = require("axios");
+const io = require("socket.io-client");
 
 // Configuration
-const baseUrl = 'http://localhost:5000';
+const baseUrl = "http://localhost:5000";
 const iterations = 100;
 const concurrentClients = 20;
 const clients = [];
@@ -1214,98 +1301,100 @@ async function createStream() {
   try {
     const response = await axios.post(`${baseUrl}/api/streams`, {
       deviceId: `load-test-device-${Date.now()}`,
-      rtspUrl: 'rtsp://localhost:8554/test',
+      rtspUrl: "rtsp://localhost:8554/test",
       options: {
-        resolution: '720p',
-        fps: 30
-      }
+        resolution: "720p",
+        fps: 30,
+      },
     });
-    
+
     return response.data.streamId;
   } catch (error) {
-    console.error('Error creating stream:', error.message);
+    console.error("Error creating stream:", error.message);
     return null;
   }
 }
 
 async function connectClients(count, streamId) {
   console.log(`Connecting ${count} clients to stream ${streamId}...`);
-  
+
   for (let i = 0; i < count; i++) {
     const client = io(`${baseUrl}/client`);
-    
-    client.on('connect', () => {
+
+    client.on("connect", () => {
       console.log(`Client ${i} connected`);
-      
+
       // Request stream
-      client.emit('stream:request', {
+      client.emit("stream:request", {
         streamId,
-        requestId: `req_${Date.now()}_${i}`
+        requestId: `req_${Date.now()}_${i}`,
       });
     });
-    
-    client.on('stream:data', (data) => {
+
+    client.on("stream:data", (data) => {
       // Just count received chunks
       client.chunksReceived = (client.chunksReceived || 0) + 1;
     });
-    
+
     clients.push(client);
   }
 }
 
 async function runTest() {
-  console.log('Starting load test...');
+  console.log("Starting load test...");
   const start = performance.now();
-  
+
   // Create a test stream
   const streamId = await createStream();
   if (!streamId) {
-    console.error('Failed to create test stream');
+    console.error("Failed to create test stream");
     return;
   }
-  
+
   // Start the stream
   try {
     await axios.post(`${baseUrl}/api/streams/${streamId}/start`);
     console.log(`Started stream ${streamId}`);
   } catch (error) {
-    console.error('Error starting stream:', error.message);
+    console.error("Error starting stream:", error.message);
     return;
   }
-  
+
   // Connect clients
   await connectClients(concurrentClients, streamId);
-  
+
   // Run for 60 seconds
-  console.log('Running test for 60 seconds...');
-  await new Promise(resolve => setTimeout(resolve, 60000));
-  
+  console.log("Running test for 60 seconds...");
+  await new Promise((resolve) => setTimeout(resolve, 60000));
+
   // Calculate results
   let totalChunks = 0;
-  clients.forEach(client => {
+  clients.forEach((client) => {
     totalChunks += client.chunksReceived || 0;
   });
-  
+
   const end = performance.now();
   const duration = (end - start) / 1000;
-  
-  console.log('Load test complete');
-  console.log('-------------------');
+
+  console.log("Load test complete");
+  console.log("-------------------");
   console.log(`Duration: ${duration.toFixed(2)} seconds`);
   console.log(`Concurrent clients: ${concurrentClients}`);
   console.log(`Total chunks received: ${totalChunks}`);
   console.log(`Chunks per second: ${(totalChunks / duration).toFixed(2)}`);
-  console.log(`Chunks per client: ${(totalChunks / concurrentClients).toFixed(2)}`);
-  
+  console.log(
+    `Chunks per client: ${(totalChunks / concurrentClients).toFixed(2)}`
+  );
+
   // Cleanup
-  clients.forEach(client => client.disconnect());
-  
+  clients.forEach((client) => client.disconnect());
+
   // Stop the stream
   try {
     await axios.post(`${baseUrl}/api/streams/${streamId}/stop`);
     console.log(`Stopped stream ${streamId}`);
   } catch (error) {
-    console.error('Error stopping stream:', error.message);
+    console.error("Error stopping stream:", error.message);
   }
 }
 
@@ -1317,12 +1406,14 @@ runTest().catch(console.error);
 You now have a complete, working simulation of the distributed node architecture for RTSP streaming. This setup demonstrates:
 
 1. **Distributed Node Architecture**:
+
    - Head Nodes for traffic handling
    - Swap Nodes for transport
    - Manager Nodes for control
    - Data Nodes for storage
 
 2. **Resource Orchestration**:
+
    - Dynamic node allocation
    - Resource monitoring
    - Fault tolerance

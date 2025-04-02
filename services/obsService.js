@@ -4,37 +4,27 @@ class OBSService {
   constructor() {
     this.obs = new OBSWebSocket();
     this.connected = false;
-    this.obsScenes = [];
-    this.obsSourceTypes = [];
-    this.currentScene = null;
   }
 
-  // Connect to OBS
   async connect(address = 'localhost:4444', password = '') {
     try {
-      await this.obs.connect(address, password);
-      this.connected = true;
+      await this.obs.connect(`ws://${address}`, password);
       console.log('Connected to OBS');
+      this.connected = true;
       
-      // Get initial data
-      const scenes = await this.obs.call('GetSceneList');
-      this.obsScenes = scenes.scenes;
-      this.currentScene = scenes.currentScene;
-
-      // Listen for events
-      this.obs.on('SwitchScenes', data => {
-        this.currentScene = data.sceneName;
+      // Set up event handlers
+      this.obs.on('error', err => {
+        console.error('OBS WebSocket Error:', err);
       });
-
+      
       return true;
     } catch (error) {
-      console.error('Failed to connect to OBS:', error);
+      console.error('Error connecting to OBS:', error);
       this.connected = false;
       return false;
     }
   }
 
-  // Disconnect from OBS
   async disconnect() {
     if (this.connected) {
       await this.obs.disconnect();
@@ -43,87 +33,97 @@ class OBSService {
     }
   }
 
-  // Get all scenes
-  async getScenes() {
-    if (!this.connected) return [];
-    
-    try {
-      const { scenes } = await this.obs.call('GetSceneList');
-      this.obsScenes = scenes;
-      return scenes;
-    } catch (error) {
-      console.error('Failed to get scenes:', error);
-      return [];
-    }
-  }
-
-  // Switch to a specific scene
-  async switchScene(sceneName) {
-    if (!this.connected) return false;
-    
-    try {
-      await this.obs.call('SetCurrentScene', { 'scene-name': sceneName });
-      this.currentScene = sceneName;
-      return true;
-    } catch (error) {
-      console.error('Failed to switch scene:', error);
-      return false;
-    }
-  }
-
-  // Start streaming
-  async startStreaming() {
-    if (!this.connected) return false;
-    
-    try {
-      await this.obs.call('StartStreaming');
-      return true;
-    } catch (error) {
-      console.error('Failed to start streaming:', error);
-      return false;
-    }
-  }
-
-  // Stop streaming
-  async stopStreaming() {
-    if (!this.connected) return false;
-    
-    try {
-      await this.obs.call('StopStreaming');
-      return true;
-    } catch (error) {
-      console.error('Failed to stop streaming:', error);
-      return false;
-    }
-  }
-
-  // Create a media source for RTSP
   async createRtspSource(sceneName, sourceName, rtspUrl) {
-    if (!this.connected) return false;
-    
+    if (!this.connected) {
+      throw new Error('Not connected to OBS');
+    }
+
     try {
-      // Create input
-      await this.obs.call('CreateInput', {
+      // Check if scene exists
+      const scenes = await this.obs.call('GetSceneList');
+      const sceneExists = scenes.scenes.some(scene => scene.sceneName === sceneName);
+      
+      if (!sceneExists) {
+        // Create scene if it doesn't exist
+        await this.obs.call('CreateScene', {
+          sceneName
+        });
+      }
+      
+      // Check if source already exists
+      const sources = await this.obs.call('GetSourcesList');
+      const sourceExists = sources.sources.some(source => source.sourceName === sourceName);
+      
+      if (sourceExists) {
+        // Remove existing source
+        await this.obs.call('RemoveSource', {
+          sourceName
+        });
+      }
+      
+      // Create media source for RTSP
+      await this.obs.call('CreateSource', {
+        sourceName,
+        sourceKind: 'ffmpeg_source',
         sceneName,
-        inputName: sourceName,
-        inputKind: 'ffmpeg_source',
-        inputSettings: {
-          is_local_file: false,
+        sourceSettings: {
           input: rtspUrl,
-          buffering_mb: 2,
+          hw_decode: true,
+          buffering_mb: 10,
           reconnect_delay_sec: 1,
           restart_on_activate: true
         }
       });
       
+      console.log(`Created RTSP source ${sourceName} in scene ${sceneName}`);
       return true;
     } catch (error) {
-      console.error('Failed to create RTSP source:', error);
-      return false;
+      console.error('Error creating RTSP source:', error);
+      throw error;
+    }
+  }
+
+  async startStreaming() {
+    if (!this.connected) {
+      throw new Error('Not connected to OBS');
+    }
+
+    try {
+      const streamStatus = await this.obs.call('GetStreamStatus');
+      
+      if (!streamStatus.outputActive) {
+        await this.obs.call('StartStream');
+        console.log('OBS streaming started');
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error starting OBS stream:', error);
+      throw error;
+    }
+  }
+
+  async stopStreaming() {
+    if (!this.connected) {
+      throw new Error('Not connected to OBS');
+    }
+
+    try {
+      const streamStatus = await this.obs.call('GetStreamStatus');
+      
+      if (streamStatus.outputActive) {
+        await this.obs.call('StopStream');
+        console.log('OBS streaming stopped');
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error stopping OBS stream:', error);
+      throw error;
     }
   }
 }
 
-// Create and export a singleton instance
+// Create singleton instance
 const obsService = new OBSService();
 export default obsService;

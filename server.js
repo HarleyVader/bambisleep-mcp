@@ -1,5 +1,6 @@
 import express from 'express';
 import http from 'http';
+import { Server } from 'socket.io';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import path from 'path';
@@ -10,10 +11,10 @@ import apiRoutes from './routes/apiRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import nodeRoutes from './routes/nodeRoutes.js';
-import streamRoutes from './routes/streamRoutes.js'; // Add stream routes
+import streamRoutes from './routes/streamRoutes.js';
 
-// Import socket server
-import createSocketServer from './socket/socket-server.js';
+// Import socket initialization
+import initializeSocket from '.socket/socket.js';
 
 // Import OBS service
 import obsService from './services/obsService.js';
@@ -25,9 +26,10 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 const server = http.createServer(app);
+const io = new Server(server);
 
-// Initialize socket.io
-const io = createSocketServer(server);
+// Initialize socket with io
+initializeSocket(io);
 
 // Middleware
 app.use(express.json());
@@ -52,7 +54,7 @@ app.use('/api/contexts', apiRoutes);
 app.use('/api/users', userRoutes);
 app.use('/admin', adminRoutes);
 app.use('/api/nodes', nodeRoutes);
-app.use('/api/streams', streamRoutes); // Add stream routes
+app.use('/api/streams', streamRoutes);
 
 // Index Route (Render Home Page)
 app.get('/', async (req, res) => {

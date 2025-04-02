@@ -1,5 +1,5 @@
-import Resource from './models/resourceModel.js';
-import streamOrchestrator from './services/streamOrchestratorService.js';
+import Resource from '../models/resourceModel.js';
+import streamOrchestrator from '../services/streamOrchestratorService.js';
 
 export default function initializeSocket(io) {
   // Manager Node namespace

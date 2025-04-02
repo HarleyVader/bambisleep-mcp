@@ -2,6 +2,7 @@ import express from 'express';
 import mongoose from 'mongoose';
 import { getContexts, createContext } from '../services/contextService.js';
 import { User } from '../models/userModel.js'; // Use named import
+import Resource from '../models/resourceModel.js';
 
 const router = express.Router();
 
@@ -48,6 +49,24 @@ router.post('/create-context', isStreamer, async (req, res) => {
   } catch (err) {
     res.status(500).send('Error creating context');
   }
+});
+
+// Get all nodes
+router.get('/nodes', async (req, res) => {
+  try {
+    const nodes = await Resource.find();
+    
+    res.render('admin/nodes', { nodes });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Simulate particles
+swapNode.socket.emit('particles:process', {
+  streamId: 'test-stream',
+  particleIds: Array(20).fill().map((_, i) => `particle_${i}`),
+  headNodeId: 'head-node-id' // Use actual head node ID
 });
 
 export default router;
