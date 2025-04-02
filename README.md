@@ -1,0 +1,25 @@
+/project-root
+  /backend
+    /models
+      contextModel.js
+      userModel.js
+    /routes
+      apiRoutes.js
+      userRoutes.js
+      adminRoutes.js
+    /services
+      contextService.js
+      userService.js
+      obsService.js
+    server.js
+    socket.js
+    .env
+  /views
+    index.ejs
+    profile.ejs
+    admin.ejs
+  /public
+    /css
+      styles.css
+    /js
+      main.js

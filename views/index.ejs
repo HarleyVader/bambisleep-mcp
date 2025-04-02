@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Home</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header>
+    <h1>Welcome to the Context Manager</h1>
+  </header>
+  <main>
+    <h2>Available Contexts</h2>
+    <ul>
+      <% contexts.forEach(context => { %>
+        <li><%= context.name %>: <%= JSON.stringify(context.data) %></li>
+      <% }) %>
+    </ul>
+    <a href="/profile/1">Go to Profile</a>
+  </main>
+  <script src="/js/main.js"></script>
+</body>
+</html>

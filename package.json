@@ -1,0 +1,21 @@
+{
+  "name": "bambisleep-mcp",
+  "version": "0.0.1",
+  "description": "bambisleep.chat MCP OBS Lmstudio",
+  "homepage": "https://github.com/HarleyVader/bambisleep-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/HarleyVader/bambisleep-mcp/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/HarleyVader/bambisleep-mcp.git"
+  },
+  "license": "ISC",
+  "author": "melkanea",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "test": "node server.js",
+    "start": "node server.js"
+  }
+}
