@@ -10,6 +10,7 @@ import apiRoutes from './routes/apiRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import nodeRoutes from './routes/nodeRoutes.js';
+import streamRoutes from './routes/streamRoutes.js'; // Add stream routes
 
 // Import socket server
 import createSocketServer from './socket/socket-server.js';
@@ -51,6 +52,7 @@ app.use('/api/contexts', apiRoutes);
 app.use('/api/users', userRoutes);
 app.use('/admin', adminRoutes);
 app.use('/api/nodes', nodeRoutes);
+app.use('/api/streams', streamRoutes); // Add stream routes
 
 // Index Route (Render Home Page)
 app.get('/', async (req, res) => {
@@ -75,6 +77,11 @@ app.get('/streamer/:id', async (req, res) => {
     console.error('Error loading streamer profile:', err);
     res.status(500).send('Error loading profile');
   }
+});
+
+// Streaming client route
+app.get('/stream-client', (req, res) => {
+  res.render('streaming-client');
 });
 
 // Connect to OBS if configured

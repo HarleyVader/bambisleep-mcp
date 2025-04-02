@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RTSP Stream Client</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f5f5f5;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .video-container {
+      max-width: 800px;
+      margin: 20px auto;
+    }
+    video {
+      width: 100%;
+      border: 1px solid #ccc;
+      background-color: #000;
+    }
+    .control-panel {
+      margin: 20px auto;
+      max-width: 800px;
+      padding: 15px;
+      background: #fff;
+      border-radius: 5px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    .stream-controls, .node-controls {
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 1px solid #eee;
+    }
+    button {
+      padding: 8px 16px;
+      margin: 5px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 4px;
+    }
+    button:disabled {
+      background-color: #cccccc;
+      cursor: not-allowed;
+    }
+    .status {
+      padding: 10px;
+      margin: 10px 0;
+      background: #e6e6e6;
+      border-radius: 3px;
+    }
+    .stream-list {
+      margin-top: 20px;
+    }
+    .stream-item {
+      padding: 10px;
+      margin: 5px 0;
+      background-color: #f0f0f0;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .stream-item:hover {
+      background-color: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>RTSP Stream Client</h1>
+    
+    <div class="video-container">
+      <video id="videoElement" controls autoplay></video>
+    </div>
+    
+    <div class="control-panel">
+      <div class="node-controls">
+        <h3>Node Control</h3>
+        <div>
+          <button id="connectBtn">Connect as Swap Node</button>
+          <button id="registerBtn" disabled>Register Resources</button>
+        </div>
+        <div class="status" id="nodeStatus">Status: Not connected</div>
+      </div>
+      
+      <div class="stream-controls">
+        <h3>Stream Control</h3>
+        <div>
+          <button id="refreshStreamsBtn" disabled>Refresh Streams</button>
+          <button id="requestStreamBtn" disabled>Request Stream</button>
+          <button id="stopStreamBtn" disabled>Stop Stream</button>
+        </div>
+        <div class="status" id="streamStatus">Status: No active stream</div>
+      </div>
+      
+      <div class="stream-list" id="streamList">
+        <h3>Available Streams</h3>
+        <div id="noStreams">No streams available</div>
+        <!-- Stream items will be added here dynamically -->
+      </div>
+    </div>
+  </div>
+  
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/client-node.js"></script>
+  <script src="/js/stream-viewer.js"></script>
+  <script>
+    // Streaming client logic
+    document.addEventListener('DOMContentLoaded', () => {
+      const videoElement = document.getElementById('videoElement');
+      const connectBtn = document.getElementById('connectBtn');
+      const registerBtn = document.getElementById('registerBtn');
+      const refreshStreamsBtn = document.getElementById('refreshStreamsBtn');
+      const requestStreamBtn = document.getElementById('requestStreamBtn');
+      const stopStreamBtn = document.getElementById('stopStreamBtn');
+      const nodeStatus = document.getElementById('nodeStatus');
+      const streamStatus = document.getElementById('streamStatus');
+      const streamList = document.getElementById('streamList');
+      const noStreams = document.getElementById('noStreams');
+      
+      let clientNode = null;
+      let streamViewer = null;
+      let activeStreamId = null;
+      
+      // Initialize StreamViewer
+      function initStreamViewer() {
+        streamViewer = new StreamViewer({
+          videoElement: videoElement,
+          statusElement: streamStatus
+        });
+        
+        streamViewer.init().then(initialized => {
+          if (initialized) {
+            requestStreamBtn.disabled = false;
+          }
+        });
+      }
+      
+      // Connect button handler
+      connectBtn.addEventListener('click', () => {
+        // Initialize client node
+        clientNode = new ClientNode({
+          nodeType: 'swap'
+        });
+        
+        // Listen for connection status changes
+        const checkConnection = setInterval(() => {
+          if (clientNode.connected) {
+            connectBtn.disabled = true;
+            registerBtn.disabled = false;
+            nodeStatus.textContent = 'Status: Connected as Swap Node';
+            clearInterval(checkConnection);
+            
+            // Initialize stream viewer
+            initStreamViewer();
+            
+            // Fetch available streams
+            fetchStreams();
+          }
+        }, 500);
+      });
+      
+      // Register resources button handler
+      registerBtn.addEventListener('click', () => {
+        clientNode.updateResources().then(() => {
+          nodeStatus.textContent = `Status: Resources registered - CPU: ${clientNode.resources.cpu}%, Memory: ${clientNode.resources.memory}MB`;
+          refreshStreamsBtn.disabled = false;
+        });
+      });
+      
+      // Refresh streams button handler
+      refreshStreamsBtn.addEventListener('click', () => {
+        fetchStreams();
+      });
+      
+      // Request stream button handler
+      requestStreamBtn.addEventListener('click', () => {
+        if (!activeStreamId) {
+          // If no stream is selected, prompt for stream ID
+          const streamId = prompt('Enter stream ID to request:', 'stream_1');
+          if (!streamId) return;
+          activeStreamId = streamId;
+        }
+        
+        streamStatus.textContent = `Status: Requesting stream ${activeStreamId}...`;
+        
+        // Request the stream
+        streamViewer.requestStream(activeStreamId);
+        stopStreamBtn.disabled = false;
+        requestStreamBtn.disabled = true;
+      });
+      
+      // Stop stream button handler
+      stopStreamBtn.addEventListener('click', () => {
+        if (streamViewer && activeStreamId) {
+          streamViewer.cancelStreamRequest();
+          activeStreamId = null;
+          streamStatus.textContent = 'Status: Stream stopped';
+          stopStreamBtn.disabled = true;
+          requestStreamBtn.disabled = false;
+        }
+      });
+      
+      // Fetch available streams from the API
+      function fetchStreams() {
+        fetch('/api/streams')
+          .then(response => response.json())
+          .then(data => {
+            if (data.streams && data.streams.length > 0) {
+              renderStreamList(data.streams);
+              noStreams.style.display = 'none';
+            } else {
+              noStreams.style.display = 'block';
+              streamList.querySelectorAll('.stream-item').forEach(item => item.remove());
+            }
+          })
+          .catch(error => {
+            console.error('Error fetching streams:', error);
+            nodeStatus.textContent = `Status: Error fetching streams - ${error.message}`;
+          });
+      }
+      
+      // Render stream list
+      function renderStreamList(streams) {
+        // Clear existing items except the "no streams" message
+        streamList.querySelectorAll('.stream-item').forEach(item => item.remove());
+        
+        // Add new stream items
+        streams.forEach(stream => {
+          const streamItem = document.createElement('div');
+          streamItem.className = 'stream-item';
+          streamItem.textContent = `${stream.streamId} - Device: ${stream.deviceId} - Status: ${stream.status}`;
+          streamItem.addEventListener('click', () => {
+            activeStreamId = stream.streamId;
+            streamStatus.textContent = `Status: Selected stream ${stream.streamId}`;
+            requestStreamBtn.disabled = false;
+          });
+          
+          streamList.appendChild(streamItem);
+        });
+      }
+    });
+  </script>
+</body>
+</html>
