@@ -1,37 +1,49 @@
 import express from 'express';
 import http from 'http';
-import { Server as SocketIO } from 'socket.io';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Import routes
 import apiRoutes from './routes/apiRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import nodeRoutes from './routes/nodeRoutes.js';
-import initializeSocket from './socket.js';
+
+// Import socket server
+import createSocketServer from './socket/socket-server.js';
+
+// Import OBS service
+import obsService from './services/obsService.js';
 
 dotenv.config();
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
 const server = http.createServer(app);
-const io = new SocketIO(server);
+
+// Initialize socket.io
+const io = createSocketServer(server);
 
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public')); // Serve static files from the "public" folder
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Set EJS as the templating engine
 app.set('view engine', 'ejs');
-app.set('views', './views');
+app.set('views', path.join(__dirname, 'views'));
 
 // Database Connection
-const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/hyped_model';
-console.log('MongoDB URI:', mongoURI);
-mongoose.connect(mongoURI, /*{ useNewUrlParser: true, useUnifiedTopology: true }*/)
+const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/bambisleep_mcp';
+mongoose.connect(mongoURI)
   .then(() => console.log('MongoDB connected'))
   .catch(err => {
     console.error('MongoDB connection error:', err);
-    process.exit(1); // Exit the process if the database connection fails
+    process.exit(1);
   });
 
 // Routes
@@ -43,27 +55,42 @@ app.use('/api/nodes', nodeRoutes);
 // Index Route (Render Home Page)
 app.get('/', async (req, res) => {
   try {
-    const contexts = await mongoose.model('Context').find(); // Fetch contexts
+    const Context = mongoose.model('Context');
+    const contexts = await Context.find();
     res.render('index', { contexts });
   } catch (err) {
+    console.error('Error loading contexts:', err);
     res.status(500).send('Error loading contexts');
   }
 });
 
-// Profile Route (Render User Profile)
-app.get('/profile/:id', async (req, res) => {
+// Streamer profile route
+app.get('/streamer/:id', async (req, res) => {
   try {
-    console.log('User ID:', req.query.userId);
-    const user = await mongoose.model('User').findById(req.params.id); // Fetch user by ID
+    const User = mongoose.model('User');
+    const user = await User.findById(req.params.id);
     if (!user) return res.status(404).send('User not found');
-    res.render('profile', { user });
+    res.render('streamer', { user });
   } catch (err) {
+    console.error('Error loading streamer profile:', err);
     res.status(500).send('Error loading profile');
   }
 });
 
-// Initialize Socket.IO
-initializeSocket(io);
+// Connect to OBS if configured
+const OBS_ADDRESS = process.env.OBS_ADDRESS || 'localhost:4444';
+const OBS_PASSWORD = process.env.OBS_PASSWORD || '';
+
+if (process.env.CONNECT_OBS === 'true') {
+  obsService.connect(OBS_ADDRESS, OBS_PASSWORD)
+    .then(connected => {
+      if (connected) {
+        console.log('OBS connected successfully');
+      } else {
+        console.warn('Could not connect to OBS, some features will be disabled');
+      }
+    });
+}
 
 // Start Server
 const PORT = process.env.PORT || 5000;
@@ -71,13 +98,21 @@ server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
 
-export const getContexts = async () => {
-  try {
-    const contexts = await Context.find();
-    console.log('Fetched contexts:', contexts); // Log fetched contexts
-    return contexts;
-  } catch (err) {
-    console.error('Error fetching contexts:', err);
-    throw err;
+// Graceful shutdown
+process.on('SIGINT', async () => {
+  console.log('Shutting down gracefully...');
+  
+  // Disconnect from OBS
+  if (obsService.connected) {
+    await obsService.disconnect();
   }
-};
+  
+  // Close MongoDB connection
+  await mongoose.connection.close();
+  
+  // Close the HTTP server
+  server.close(() => {
+    console.log('Server shut down successfully');
+    process.exit(0);
+  });
+});

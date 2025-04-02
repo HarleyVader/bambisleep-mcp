@@ -1,0 +1,31 @@
+{
+  "server": {
+    "port": 3000,
+    "host": "0.0.0.0",
+    "apiBasePath": "/api"
+  },
+  "database": {
+    "url": "mongodb://localhost:27017/rtsp-stream-factory",
+    "options": {
+      "useNewUrlParser": true,
+      "useUnifiedTopology": true
+    }
+  },
+  "rtsp": {
+    "streamTimeout": 600,
+    "maxStreams": 100
+  },
+  "socket": {
+    "namespace": "/stream",
+    "pingInterval": 25000,
+    "pingTimeout": 5000
+  },
+  "obs": {
+    "apiUrl": "http://localhost:4444",
+    "password": "your_obs_password"
+  },
+  "logging": {
+    "level": "info",
+    "file": "logs/app.log"
+  }
+}
