@@ -1,27 +1,40 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import { getContexts, createContext } from '../services/contextService.js';
-import User from '../models/userModel.js';
+import { User } from '../models/userModel.js'; // Use named import
 
 const router = express.Router();
 
 // Middleware to check if the user has the "streamer" role
 const isStreamer = async (req, res, next) => {
   const userId = req.query.userId; // Assume user ID is passed as a query parameter
-  const user = await User.findById(userId);
-  if (user && user.role === 'streamer') {
-    next();
-  } else {
-    res.status(403).send('Access denied');
+
+  // Validate ObjectId
+  if (!mongoose.Types.ObjectId.isValid(userId)) {
+    return res.status(400).send('Invalid user ID');
+  }
+
+  try {
+    const user = await User.findById(userId);
+    if (user && user.role === 'streamer') {
+      next();
+    } else {
+      res.status(403).send('Access denied');
+    }
+  } catch (err) {
+    console.error('Error in isStreamer middleware:', err);
+    res.status(500).send('Internal server error');
   }
 };
 
 // Admin panel route
 router.get('/', isStreamer, async (req, res) => {
   try {
-    const contexts = await getContexts();
-    res.render('admin', { contexts });
+    const contexts = await getContexts(); // Fetch contexts
+    res.render('admin', { contexts }); // Pass contexts to the EJS template
   } catch (err) {
-    res.status(500).send('Error loading admin panel');
+    console.error('Error loading contexts:', err);
+    res.status(500).send('Error loading contexts'); // Send error response
   }
 });
 
@@ -38,3 +51,4 @@ router.post('/create-context', isStreamer, async (req, res) => {
 });
 
 export default router;
+

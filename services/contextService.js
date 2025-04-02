@@ -2,7 +2,12 @@ import Context from '../models/contextModel.js';
 
 // Fetch all contexts
 export const getContexts = async () => {
-  return await Context.find();
+  try {
+    return await Context.find(); // Fetch all contexts from the database
+  } catch (err) {
+    console.error('Error fetching contexts:', err);
+    throw err; // Rethrow the error to handle it in the route
+  }
 };
 
 // Create a new context

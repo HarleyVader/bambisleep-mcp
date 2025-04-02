@@ -6,6 +6,7 @@ import dotenv from 'dotenv';
 import apiRoutes from './routes/apiRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import nodeRoutes from './routes/nodeRoutes.js';
 import initializeSocket from './socket.js';
 
 dotenv.config();
@@ -25,14 +26,19 @@ app.set('views', './views');
 
 // Database Connection
 const mongoURI = process.env.MONGO_URI || 'mongodb://localhost:27017/hyped_model';
-mongoose.connect(mongoURI, { useNewUrlParser: true, useUnifiedTopology: true })
+console.log('MongoDB URI:', mongoURI);
+mongoose.connect(mongoURI, /*{ useNewUrlParser: true, useUnifiedTopology: true }*/)
   .then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err));
+  .catch(err => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1); // Exit the process if the database connection fails
+  });
 
 // Routes
 app.use('/api/contexts', apiRoutes);
 app.use('/api/users', userRoutes);
 app.use('/admin', adminRoutes);
+app.use('/api/nodes', nodeRoutes);
 
 // Index Route (Render Home Page)
 app.get('/', async (req, res) => {
@@ -47,6 +53,7 @@ app.get('/', async (req, res) => {
 // Profile Route (Render User Profile)
 app.get('/profile/:id', async (req, res) => {
   try {
+    console.log('User ID:', req.query.userId);
     const user = await mongoose.model('User').findById(req.params.id); // Fetch user by ID
     if (!user) return res.status(404).send('User not found');
     res.render('profile', { user });
@@ -63,3 +70,14 @@ const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
+
+export const getContexts = async () => {
+  try {
+    const contexts = await Context.find();
+    console.log('Fetched contexts:', contexts); // Log fetched contexts
+    return contexts;
+  } catch (err) {
+    console.error('Error fetching contexts:', err);
+    throw err;
+  }
+};

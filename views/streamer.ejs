@@ -3,17 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= user.username %>'s Profile</title>
+  <title><%= user.username %>'s Stream</title>
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
   <header>
-    <h1><%= user.username %>'s Profile</h1>
+    <h1><%= user.username %>'s Stream</h1>
   </header>
   <main>
     <p>Email: <%= user.email %></p>
     <p>Joined: <%= new Date(user.createdAt).toLocaleDateString() %></p>
+
+    <h2>Live Stream</h2>
+    <iframe
+      src="https://fickdichselber.com/mcp/streamer/profile?stream=<%= user.username %>&key=<%= user.streamKey %>&savagery=true"
+      width="800"
+      height="450"
+      frameborder="0"
+      allowfullscreen>
+    </iframe>
+
     <a href="/">Back to Home</a>
   </main>
   <script src="/js/main.js"></script>
-</body></html>
+</body>
+</html>
