@@ -1434,3 +1434,185 @@ You now have a complete, working simulation of the distributed node architecture
 This simulation provides a solid foundation for expanding the system to a production environment.
 
 Similar code found with 4 license types
+`````
+{
+  "project": "BambiSleep MCP",
+  "description": "RTSP Stream Factory with Distributed Node Architecture",
+  "prerequisites": {
+    "os": ["Windows 10/11", "Linux (Ubuntu 20.04+ recommended)"],
+    "software": [
+      {"name": "Node.js", "version": "v16.x or higher"},
+      {"name": "MongoDB", "version": "v5.0 or higher"},
+      {"name": "Git", "version": "Latest version"},
+      {"name": "OBS Studio", "version": "v28.0 or higher"},
+      {"name": "FFmpeg", "version": "Latest version"}
+    ],
+    "hardware": {
+      "ram": "8GB minimum",
+      "cpu": "Quad-core minimum",
+      "storage": "50GB free disk space minimum"
+    }
+  },
+  "installation": {
+    "baseSetup": [
+      {
+        "step": "Install Node.js and npm",
+        "windows": "Install nvm and use it to install Node.js LTS",
+        "linux": [
+          "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.2/install.sh | bash",
+          "source ~/.nvm/nvm.sh",
+          "nvm install --lts"
+        ]
+      },
+      {
+        "step": "Install MongoDB",
+        "windows": "Download and install from https://www.mongodb.com/try/download/community",
+        "linux": [
+          "sudo apt-get install gnupg curl",
+          "curl -fsSL https://www.mongodb.org/static/pgp/server-8.0.asc | sudo gpg -o /usr/share/keyrings/mongodb-server-8.0.gpg --dearmor",
+          "echo \"deb [ signed-by=/usr/share/keyrings/mongodb-server-8.0.gpg ] http://repo.mongodb.org/apt/debian bookworm/mongodb-org/8.0 main\" | sudo tee /etc/apt/sources.list.d/mongodb-org-8.0.list",
+          "sudo apt-get update",
+          "sudo apt-get install -y mongodb-org",
+          "sudo systemctl start mongod",
+          "sudo systemctl enable mongod"
+        ]
+      },
+      {
+        "step": "Install FFmpeg",
+        "windows": "Download from https://ffmpeg.org/download.html and add bin directory to PATH",
+        "linux": [
+          "sudo apt update",
+          "sudo apt install ffmpeg",
+          "ffmpeg -version"
+        ]
+      },
+      {
+        "step": "Install OBS Studio",
+        "windows": "Download and install from https://obsproject.com/",
+        "linux": "Download and install from https://obsproject.com/",
+        "configuration": [
+          "Go to Tools > WebSocket Server Settings",
+          "Check \"Enable WebSocket server\"",
+          "Set port to 4444",
+          "Set a password if desired (note it for later configuration)",
+          "Click OK"
+        ]
+      }
+    ],
+    "projectSetup": [
+      {
+        "step": "Clone Repository",
+        "commands": [
+          "mkdir -p f:/projects",
+          "cd f:/projects",
+          "git clone https://github.com/yourusername/bambisleep-mcp.git",
+          "cd bambisleep-mcp"
+        ]
+      },
+      {
+        "step": "Install Dependencies",
+        "commands": ["npm install"]
+      },
+      {
+        "step": "Create Environment Configuration",
+        "file": ".env",
+        "content": {
+          "PORT": "5000",
+          "MONGO_URI": "mongodb://localhost:27017/bambisleep_mcp",
+          "JWT_SECRET": "your_jwt_secret_here",
+          "OBS_ADDRESS": "localhost:4444",
+          "OBS_PASSWORD": "your_obs_password",
+          "CONNECT_OBS": "true",
+          "NODE_ENV": "development"
+        }
+      },
+      {
+        "step": "Initialize Database",
+        "commands": ["node scripts/setup-db.js"]
+      }
+    ],
+    "rtspStreamFactorySetup": [
+      {
+        "step": "Create Required Directories",
+        "commands": [
+          "mkdir -p public/js",
+          "mkdir -p views",
+          "mkdir -p models",
+          "mkdir -p services",
+          "mkdir -p controllers",
+          "mkdir -p routes",
+          "mkdir -p rtsp",
+          "mkdir -p socket"
+        ]
+      },
+      {
+        "step": "Create/Update Key Files",
+        "files": [
+          {"source": "Socket.js", "destination": "socket.js"},
+          {"source": "Client-node.js", "destination": "client-node.js"},
+          {"source": "Stream-viewer.js", "destination": "public/js/stream-viewer.js"},
+          {"source": "Streaming-client.ejs", "destination": "views/streaming-client.ejs"}
+        ]
+      }
+    ]
+  },
+  "deployment": {
+    "startServices": [
+      {
+        "step": "Start MongoDB Service",
+        "windows": "\"C:\\Program Files\\MongoDB\\Server\\5.0\\bin\\mongod.exe\" --dbpath=\"C:\\data\\db\"",
+        "linux": [
+          "sudo systemctl start mongod",
+          "sudo systemctl status mongod"
+        ]
+      },
+      {
+        "step": "Start OBS Studio",
+        "instructions": [
+          "Launch OBS Studio",
+          "Ensure the WebSocket server is enabled",
+          "Create a scene called \"Main\""
+        ]
+      },
+      {
+        "step": "Set Up Test RTSP Stream",
+        "command": "ffmpeg -re -f lavfi -i testsrc=size=1280x720:rate=30 -pix_fmt yuv420p -c:v libx264 -b:v 1M -f rtsp rtsp://localhost:8554/test",
+        "note": "Requires rtsp-simple-server running on port 8554"
+      },
+      {
+        "step": "Start Application",
+        "command": "npm start"
+      }
+    ],
+    "testing": {
+      "createStream": {
+        "method": "POST",
+        "url": "http://localhost:5000/api/streams",
+        "headers": {"Content-Type": "application/json"},
+        "body": {
+          "deviceId": "test-device-1",
+          "rtspUrl": "rtsp://localhost:8554/test",
+          "options": {
+            "resolution": "720p",
+            "fps": 30,
+            "createObsSource": true
+          }
+        }
+      },
+      "startStream": {
+        "method": "POST",
+        "url": "http://localhost:5000/api/streams/{streamId}/start",
+        "note": "Replace {streamId} with the actual ID returned from stream creation"
+      },
+      "viewStream": [
+        "Open http://localhost:5000/stream-client",
+        "Click \"Connect as Swap Node\"",
+        "Click \"Register Resources\"",
+        "Click \"Refresh Streams\"", 
+        "Select your stream from the list",
+        "Click \"Request Stream\""
+      ]
+    }
+  }
+}
+```
