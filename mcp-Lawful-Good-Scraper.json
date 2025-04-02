@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "CompliantWebScraperOutput",
+  "description": "Structured output for web scraping operations compliant with EU data protection regulations",
+  "type": "object",
+  "required": [
+    "metadata",
+    "complianceInfo",
+    "scrapedData",
+    "processingLog"
+  ],
+  "properties": {
+    "metadata": {
+      "type": "object",
+      "description": "Information about the scraping operation",
+      "required": ["operationId", "timestamp", "sourceUrl", "legalBasis"],
+      "properties": {
+        "operationId": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Unique identifier for the scraping operation"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp of when the data was collected"
+        },
+        "sourceUrl": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the scraped website (domain only, no query parameters)"
+        },
+        "sourceDomain": {
+          "type": "string",
+          "description": "Domain name of the scraped website"
+        },
+        "legalBasis": {
+          "type": "string",
+          "enum": ["legitimate_interest", "consent", "contract", "legal_obligation", "public_interest", "vital_interest"],
+          "description": "GDPR legal basis for processing this data"
+        },
+        "retentionPeriod": {
+          "type": "string",
+          "description": "How long the data will be retained (e.g., '30 days', '6 months')"
+        },
+        "processingPurpose": {
+          "type": "string",
+          "description": "Specific purpose for collecting this data"
+        }
+      }
+    },
+    "complianceInfo": {
+      "type": "object",
+      "description": "Information related to legal compliance",
+      "required": ["robotsTxtChecked", "termsChecked", "personalDataPresent"],
+      "properties": {
+        "robotsTxtChecked": {
+          "type": "boolean",
+          "description": "Whether robots.txt was checked and respected"
+        },
+        "robotsTxtAllows": {
+          "type": "boolean",
+          "description": "Whether robots.txt allows scraping of this content"
+        },
+        "termsChecked": {
+          "type": "boolean",
+          "description": "Whether site terms of service were checked"
+        },
+        "termsAllowsScraping": {
+          "type": "boolean",
+          "description": "Whether site terms allow scraping"
+        },
+        "personalDataPresent": {
+          "type": "boolean",
+          "description": "Whether personal data is present in the scraped content"
+        },
+        "dataMinimized": {
+          "type": "boolean",
+          "description": "Whether personal data has been minimized/redacted where possible"
+        },
+        "copyrightNotice": {
+          "type": "string",
+          "description": "Copyright notice from the source if present"
+        },
+        "dpoPreviouslyNotified": {
+          "type": "boolean",
+          "description": "Whether DPO has been previously notified about scraping this domain"
+        }
+      }
+    },
+    "scrapedData": {
+      "type": "object",
+      "description": "The actual data extracted from the website",
+      "required": ["contentType", "elements"],
+      "properties": {
+        "contentType": {
+          "type": "string",
+          "enum": ["article", "product", "listing", "profile", "generic"],
+          "description": "Type of content that was scraped"
+        },
+        "elements": {
+          "type": "array",
+          "description": "Array of extracted elements",
+          "items": {
+            "type": "object",
+            "required": ["elementType", "data", "containsPersonalData"],
+            "properties": {
+              "elementType": {
+                "type": "string",
+                "description": "Type of the element (heading, paragraph, price, etc.)"
+              },
+              "data": {
+                "type": "string",
+                "description": "The extracted data, anonymized if it contains personal information"
+              },
+              "containsPersonalData": {
+                "type": "boolean",
+                "description": "Whether this element contained personal data"
+              },
+              "dataCategory": {
+                "type": "string",
+                "enum": ["public", "pseudonymized", "anonymized", "special_category", "none"],
+                "description": "Category of data if personal"
+              },
+              "processingJustification": {
+                "type": "string",
+                "description": "Specific justification for processing this element if it contains personal data"
+              }
+            }
+          }
+        },
+        "structuredData": {
+          "type": "object",
+          "description": "Structured data extracted from the page (if available)"
+        },
+        "metaTags": {
+          "type": "object",
+          "description": "Metadata from the page, excluding personal data"
+        }
+      }
+    },
+    "processingLog": {
+      "type": "array",
+      "description": "Log of processing steps for auditability",
+      "items": {
+        "type": "object",
+        "required": ["timestamp", "action"],
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "format": "date-time",
+            "description": "When this processing step occurred"
+          },
+          "action": {
+            "type": "string",
+            "description": "Processing action performed"
+          },
+          "details": {
+            "type": "string",
+            "description": "Details about the processing step"
+          },
+          "automatedDecision": {
+            "type": "boolean",
+            "description": "Whether this was an automated decision"
+          }
+        }
+      }
+    },
+    "riskAssessment": {
+      "type": "object",
+      "description": "Assessment of data protection risks",
+      "properties": {
+        "riskLevel": {
+          "type": "string",
+          "enum": ["low", "medium", "high", "very_high"],
+          "description": "Overall risk level of this scraping operation"
+        },
+        "dataProtectionImpact": {
+          "type": "string",
+          "description": "Impact assessment summary"
+        },
+        "mitigationMeasures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Measures taken to mitigate risks"
+        }
+      }
+    }
+  }
+}
