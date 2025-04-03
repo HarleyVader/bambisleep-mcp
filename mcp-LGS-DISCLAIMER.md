@@ -20,12 +20,13 @@ Review the website's terms of service
 Document compliance with these policies in the complianceInfo section
 
 **Retention Policy:**
-### Implement automated deletion after the retention period expires
-## **Only keep data as long as necessary for the stated purpose**
+Implement automated deletion after the retention period expires
+Only keep data as long as necessary for the stated purpose
 
-# **Example scraper output**
-```
-const scrapingResult = {
+# Example scraper output
+
+```json
+{
   "metadata": {
     "operationId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
     "timestamp": "2025-04-02T14:28:31.248Z",

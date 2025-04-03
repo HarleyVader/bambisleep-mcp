@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft-07/schema#",
-  "title": "CompliantWebScraperOutput",
-  "description": "Structured output for web scraping operations compliant with EU data protection regulations",
+  "title": "LawfulGoodScraperOutput",
+  "description": "Schema for LLM to generate structured output for web scraping operations compliant with data protection regulations",
   "type": "object",
   "required": [
     "metadata",
@@ -12,18 +12,18 @@
   "properties": {
     "metadata": {
       "type": "object",
-      "description": "Information about the scraping operation",
+      "description": "Information about the scraping operation - LLM should populate with operation details",
       "required": ["operationId", "timestamp", "sourceUrl", "legalBasis"],
       "properties": {
         "operationId": {
           "type": "string",
           "format": "uuid",
-          "description": "Unique identifier for the scraping operation"
+          "description": "Unique identifier for the scraping operation (LLM should generate a UUID)"
         },
         "timestamp": {
           "type": "string",
           "format": "date-time",
-          "description": "ISO 8601 timestamp of when the data was collected"
+          "description": "ISO 8601 timestamp of when the data was collected (LLM should use current time)"
         },
         "sourceUrl": {
           "type": "string",
@@ -51,7 +51,7 @@
     },
     "complianceInfo": {
       "type": "object",
-      "description": "Information related to legal compliance",
+      "description": "Information related to legal compliance - LLM should evaluate and populate based on context",
       "required": ["robotsTxtChecked", "termsChecked", "personalDataPresent"],
       "properties": {
         "robotsTxtChecked": {
@@ -186,6 +186,54 @@
           },
           "description": "Measures taken to mitigate risks"
         }
+      }
+    },
+    "llmOutputGuidance": {
+      "type": "object",
+      "description": "Instructions for LLM when generating this output",
+      "properties": {
+        "responseFormat": {
+          "type": "string",
+          "description": "Format the output as a complete, valid JSON object following this schema structure"
+        },
+        "personalDataHandling": {
+          "type": "string",
+          "description": "Always redact or pseudonymize personal data with [REDACTED] marker and set containsPersonalData to true"
+        },
+        "complianceChecks": {
+          "type": "string",
+          "description": "Always check for compliance attributes based on context and set values truthfully"
+        },
+        "metadataGeneration": {
+          "type": "string",
+          "description": "Generate appropriate metadata including unique operationId and current timestamp"
+        }
+      }
+    },
+    "examples": {
+      "type": "object",
+      "description": "Example of a valid structure (not to be included in LLM output)",
+      "example": {
+        "metadata": {
+          "operationId": "f47ac10b-58cc-4372-a567-0e02b2c3d479",
+          "timestamp": "2025-04-02T14:28:31.248Z",
+          "sourceUrl": "https://example.com/blog",
+          "sourceDomain": "example.com",
+          "legalBasis": "legitimate_interest",
+          "retentionPeriod": "30 days",
+          "processingPurpose": "Market research on product pricing trends"
+        },
+        "complianceInfo": {
+          "robotsTxtChecked": true,
+          "robotsTxtAllows": true,
+          "termsChecked": true,
+          "termsAllowsScraping": true,
+          "personalDataPresent": false,
+          "dataMinimized": true,
+          "copyrightNotice": "© 2025 Example Company",
+          "dpoPreviouslyNotified": true
+        }
+        // Additional example data would follow the schema structure
       }
     }
   }
