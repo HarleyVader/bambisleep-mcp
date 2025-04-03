@@ -1,13 +1,24 @@
-version: '3.8'
 services:
+  # Application service
   app:
     build: .
     ports:
       - "5000:5000"
+      - "8554:8554" # RTSP port
     env_file:
       - .env
+    environment:
+      - MONGO_URI=mongodb://mongo:27017/bambisleep_mcp
+      - OBS_ADDRESS=obs:4444
+      - CONNECT_OBS=true
     depends_on:
       - mongo
+      - obs
+    volumes:
+      - app-data:/app/data
+    networks:
+      - bambi-network
+
   mongo:
     image: mongo:6
     container_name: mongo
@@ -15,5 +26,39 @@ services:
       - "27017:27017"
     volumes:
       - mongo-data:/data/db
+    networks:
+      - bambi-network
+
+  obs:
+    build:
+      context: .
+      dockerfile: obs.Dockerfile
+    container_name: obs
+    environment:
+      - OBS_PASSWORD=${OBS_PASSWORD:-}
+    ports:
+      - "4444:4444" # OBS WebSocket
+    volumes:
+      - obs-config:/config
+    networks:
+      - bambi-network
+
+  rtsp-server:
+    image: aler9/rtsp-simple-server:latest
+    container_name: rtsp-server
+    ports:
+      - "8554:8554"
+    volumes:
+      - rtsp-config:/config
+    networks:
+      - bambi-network
+
+networks:
+  bambi-network:
+    driver: bridge
+
 volumes:
   mongo-data:
+  app-data:
+  obs-config:
+  rtsp-config:

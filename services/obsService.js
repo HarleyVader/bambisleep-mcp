@@ -8,7 +8,13 @@ class OBSService {
 
   async connect(address = 'localhost:4444', password = '') {
     try {
-      await this.obs.connect(`ws://${address}`, password);
+      // Format the WebSocket URL correctly
+      const url = `ws://${address}`;
+      console.log(`Attempting to connect to OBS at ${url}`);
+      
+      // Connect to OBS WebSocket
+      await this.obs.connect(url, password);
+      
       console.log('Connected to OBS');
       this.connected = true;
       
@@ -16,6 +22,10 @@ class OBSService {
       this.obs.on('error', err => {
         console.error('OBS WebSocket Error:', err);
       });
+      
+      // Get version to confirm connection works
+      const version = await this.obs.call('GetVersion');
+      console.log('OBS Version:', version);
       
       return true;
     } catch (error) {

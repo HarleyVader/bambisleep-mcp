@@ -14,7 +14,7 @@ import nodeRoutes from './routes/nodeRoutes.js';
 import streamRoutes from './routes/streamRoutes.js';
 
 // Import socket initialization
-import initializeSocket from '.socket/socket.js';
+import initializeSocket from './socket/socket.js';
 
 // Import OBS service
 import obsService from './services/obsService.js';

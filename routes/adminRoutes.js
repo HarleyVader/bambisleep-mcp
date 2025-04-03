@@ -62,12 +62,5 @@ router.get('/nodes', async (req, res) => {
   }
 });
 
-// Simulate particles
-swapNode.socket.emit('particles:process', {
-  streamId: 'test-stream',
-  particleIds: Array(20).fill().map((_, i) => `particle_${i}`),
-  headNodeId: 'head-node-id' // Use actual head node ID
-});
-
 export default router;
 
